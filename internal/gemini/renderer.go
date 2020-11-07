@@ -25,6 +25,9 @@ func NewRenderer() Renderer {
 	return Renderer{}
 }
 
+// TODO: lists
+// TODO: code renderer
+
 func (r Renderer) link(w io.Writer, node *ast.Link, entering bool) {
 	if entering {
 		w.Write(linkPrefix)
@@ -108,7 +111,7 @@ func (r Renderer) heading(w io.Writer, node *ast.Heading, entering bool) {
 	}
 }
 
-func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) {
+func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (noNewLine bool) {
 	if entering {
 		children := node.Children
 		linkStack := make([]ast.Node, 0, len(children))
@@ -127,6 +130,18 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) {
 			return false
 		}()
 		onlyElement := len(children) == 1 || onlyElementWithGoMarkdownFix
+		onlyElementIsLink := func() bool {
+			if len(children) >= 1 {
+				if _, ok := children[0].(*ast.Link); ok {
+					return true
+				}
+				if _, ok := children[0].(*ast.Image); ok {
+					return true
+				}
+			}
+			return false
+		}()
+		noNewLine = onlyElementIsLink
 		for _, child := range children {
 			// only render links text in the paragraph if they're
 			// combined with some other text on page
@@ -146,10 +161,14 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) {
 				r.text(w, text)
 			}
 		}
-		w.Write(lineBreak)
+		if !onlyElementIsLink {
+			w.Write(lineBreak)
+		}
 		// render a links block after paragraph
 		if len(linkStack) > 0 {
-			w.Write(lineBreak)
+			if !onlyElementIsLink {
+				w.Write(lineBreak)
+			}
 			for _, link := range linkStack {
 				if link, ok := link.(*ast.Link); ok {
 					r.link(w, link, true)
@@ -161,6 +180,7 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) {
 			}
 		}
 	}
+	return
 }
 
 func (r Renderer) code(w io.Writer, node *ast.Code, entering bool) {
@@ -191,9 +211,9 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		noNewLine = false
 	case *ast.Paragraph:
 		// blockquote wraps paragraphs which makes for an extra render
-		if _, parentIsBlockQuote := node.Parent.(*ast.BlockQuote); !parentIsBlockQuote {
-			r.paragraph(w, node, entering)
-			noNewLine = false
+		_, parentIsBlockQuote := node.Parent.(*ast.BlockQuote)
+		if !parentIsBlockQuote {
+			noNewLine = r.paragraph(w, node, entering)
 		}
 	case *ast.Code:
 		// TODO: *ast.Code render is likely to be merged into paragraph
