@@ -28,9 +28,11 @@ func (r Renderer) link(w io.Writer, node *ast.Link, entering bool) {
 	if entering {
 		w.Write(linkPrefix)
 		w.Write(node.Destination)
-		if node.Title != nil {
-			w.Write(space)
-			w.Write(node.Title)
+		for _, child := range node.Children {
+			if l := child.AsLeaf(); l != nil {
+				w.Write(space)
+				w.Write(l.Literal)
+			}
 		}
 	}
 }
@@ -90,7 +92,6 @@ func (r Renderer) blockquote(w io.Writer, node *ast.BlockQuote, entering bool) {
 		}
 	} else {
 		w.Write(lineBreak)
-		w.Write(lineBreak)
 	}
 }
 
@@ -108,25 +109,39 @@ func (r Renderer) heading(w io.Writer, node *ast.Heading, entering bool) {
 		}
 	} else {
 		w.Write(lineBreak)
-		w.Write(lineBreak)
 	}
 }
 
 func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) {
 	if entering {
-		linkStack := make([]ast.Node, 0, len(node.Children))
-		onlyElement := len(node.Children) == 1
-		for _, child := range node.Children {
+		children := node.Children
+		linkStack := make([]ast.Node, 0, len(children))
+		// current version of gomarkdown/markdown finds an empty
+		// *ast.Text element before links/images, breaking the heuristic
+		onlyElementWithGoMarkdownFix := func() bool {
+			if len(node.Children) > 1 {
+				firstChild := node.Children[0]
+				_, elementIsText := firstChild.(*ast.Text)
+				asLeaf := firstChild.AsLeaf()
+				if elementIsText && asLeaf != nil && len(asLeaf.Literal) == 0 {
+					children = children[1:]
+					return true
+				}
+			}
+			return false
+		}()
+		onlyElement := len(children) == 1 || onlyElementWithGoMarkdownFix
+		for _, child := range children {
 			// only render links text in the paragraph if they're
 			// combined with some other text on page
 			if link, ok := child.(*ast.Link); ok {
-				if !(len(link.Children) > 1) && !onlyElement {
+				if !onlyElement {
 					r.linkText(w, link)
 				}
 				linkStack = append(linkStack, link)
 			}
 			if image, ok := child.(*ast.Image); ok {
-				if !(len(image.Children) > 1) && !onlyElement {
+				if !onlyElement {
 					r.imageText(w, image)
 				}
 				linkStack = append(linkStack, image)
@@ -135,9 +150,9 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) {
 				r.text(w, text)
 			}
 		}
+		w.Write(lineBreak)
 		// render a links block after paragraph
 		if len(linkStack) > 0 {
-			w.Write(lineBreak)
 			w.Write(lineBreak)
 			for _, link := range linkStack {
 				if link, ok := link.(*ast.Link); ok {
@@ -149,19 +164,16 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) {
 				w.Write(lineBreak)
 			}
 		}
-	} else {
-		w.Write(lineBreak)
-		w.Write(lineBreak)
 	}
 }
 
 func (r Renderer) code(w io.Writer, node *ast.Code, entering bool) {
-	// TODO: Renderer.code: no good way to test that yet
+	// TODO: Renderer.code: untested yet
 	if entering {
 		w.Write([]byte("```\n"))
 		w.Write(node.Content)
 	} else {
-		w.Write([]byte("```\n\n"))
+		w.Write([]byte("```\n"))
 	}
 }
 
@@ -173,19 +185,27 @@ func (r Renderer) text(w io.Writer, node *ast.Text) {
 func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.WalkStatus {
 	// despite most of the subroutines here accepting entering, most of
 	// them don't really need an extra pass
+	noNewLine := true
 	switch node := node.(type) {
 	case *ast.BlockQuote:
 		r.blockquote(w, node, entering)
+		noNewLine = false
 	case *ast.Heading:
 		r.heading(w, node, entering)
+		noNewLine = false
 	case *ast.Paragraph:
 		// blockquote wraps paragraphs which makes for an extra render
 		if _, parentIsBlockQuote := node.Parent.(*ast.BlockQuote); !parentIsBlockQuote {
 			r.paragraph(w, node, entering)
+			noNewLine = false
 		}
 	case *ast.Code:
 		// TODO: *ast.Code render is likely to be merged into paragraph
 		r.code(w, node, entering)
+		noNewLine = false
+	}
+	if !noNewLine && !entering {
+		w.Write(lineBreak)
 	}
 	return ast.GoToNext
 }
