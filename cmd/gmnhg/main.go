@@ -19,13 +19,23 @@ This is some markdown [text](https://tdem.in). This is some more text.
 
 ![This is some image](https://tdem.in/favicon.ico)
 
+[This is some full-blown link.](https://tdem.in/nyaa)
+
 This is some more plain text. More of it!
 
++ Unordered list item
++ Another list item
+	* Indented list item.
+	* Another one.
++ Third.
+
+1. Ordered list item.
+2. Another one.
+	* and another inset list.
+	* text.
+3. Yay.
+
 ## Subheading 2
-
-More text here.
-
-## Subheading 3
 
 More text!
 
@@ -37,5 +47,5 @@ func main() {
 	ast := markdown.Parse([]byte(text), parser.NewWithExtensions(parser.CommonExtensions))
 	spew.Dump(ast)
 	geminiContent := markdown.Render(ast, gemini.NewRenderer())
-	fmt.Printf("---\noriginal:\n---\n%s\n---\ngemini:\n---\n%s\n", text, geminiContent)
+	fmt.Printf("---\noriginal:\n---\n%s---\ngemini:\n---\n%s", text, geminiContent)
 }
