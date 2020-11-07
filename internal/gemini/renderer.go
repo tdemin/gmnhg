@@ -26,7 +26,6 @@ func NewRenderer() Renderer {
 }
 
 // TODO: lists
-// TODO: code renderer
 
 func (r Renderer) link(w io.Writer, node *ast.Link, entering bool) {
 	if entering {
@@ -183,14 +182,10 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 	return
 }
 
-func (r Renderer) code(w io.Writer, node *ast.Code, entering bool) {
-	// TODO: Renderer.code: untested yet
-	if entering {
-		w.Write([]byte("```\n"))
-		w.Write(node.Content)
-	} else {
-		w.Write([]byte("```\n"))
-	}
+func (r Renderer) code(w io.Writer, node *ast.CodeBlock) {
+	w.Write([]byte("```\n"))
+	w.Write(node.Literal)
+	w.Write([]byte("```\n"))
 }
 
 func (r Renderer) text(w io.Writer, node *ast.Text) {
@@ -215,10 +210,10 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		if !parentIsBlockQuote {
 			noNewLine = r.paragraph(w, node, entering)
 		}
-	case *ast.Code:
-		// TODO: *ast.Code render is likely to be merged into paragraph
-		r.code(w, node, entering)
-		noNewLine = false
+	case *ast.CodeBlock:
+		r.code(w, node)
+		// code block is not considered a wrapping element
+		w.Write(lineBreak)
 	}
 	if !noNewLine && !entering {
 		w.Write(lineBreak)

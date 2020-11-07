@@ -35,6 +35,13 @@ This is some more plain text. More of it!
 	* text.
 3. Yay.
 
+` + "```" + `
+some preformatted text
+another line of preformatted text
+
+more lines of preformatted text
+` + "```" + `
+
 ## Subheading 2
 
 More text!
