@@ -3,17 +3,18 @@
 package gemini
 
 import (
+	"bufio"
+	"bytes"
 	"io"
 
 	"github.com/gomarkdown/markdown/ast"
 )
 
 var (
-	lineBreak          = []byte{'\n'}
-	lineBreakByte byte = 0x0a
-	space              = []byte{' '}
-	linkPrefix         = []byte("=> ")
-	quotePrefix        = []byte("> ")
+	lineBreak   = []byte{'\n'}
+	space       = []byte{' '}
+	linkPrefix  = []byte("=> ")
+	quotePrefix = []byte("> ")
 )
 
 // Renderer implements markdown.Renderer.
@@ -75,23 +76,18 @@ func (r Renderer) blockquote(w io.Writer, node *ast.BlockQuote, entering bool) {
 	// TODO: Renderer.blockquote: needs support for subnode rendering;
 	// ideally to be merged with paragraph
 	if entering {
-		w.Write(quotePrefix)
 		if para, ok := node.Children[0].(*ast.Paragraph); ok {
 			for _, subnode := range para.Children {
 				if l := subnode.AsLeaf(); l != nil {
-					// TODO: Renderer.blockquote: rendering by byte is asking
-					// for optimizations
-					for _, b := range l.Literal {
-						w.Write([]byte{b})
-						if b == lineBreakByte {
-							w.Write(quotePrefix)
-						}
+					reader := bufio.NewScanner(bytes.NewBuffer(l.Literal))
+					for reader.Scan() {
+						w.Write(quotePrefix)
+						w.Write(reader.Bytes())
+						w.Write(lineBreak)
 					}
 				}
 			}
 		}
-	} else {
-		w.Write(lineBreak)
 	}
 }
 
