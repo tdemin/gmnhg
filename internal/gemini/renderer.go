@@ -175,6 +175,9 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 			if text, ok := child.(*ast.Text); ok {
 				r.text(w, text)
 			}
+			if inlineBlock, ok := child.(*ast.Code); ok {
+				r.text(w, inlineBlock)
+			}
 		}
 		if !onlyElementIsLink {
 			w.Write(lineBreak)
@@ -244,8 +247,10 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 	}
 }
 
-func (r Renderer) text(w io.Writer, node *ast.Text) {
-	w.Write(node.Literal)
+func (r Renderer) text(w io.Writer, node ast.Node) {
+	if node := node.AsLeaf(); node != nil {
+		w.Write(node.Literal)
+	}
 }
 
 // RenderNode implements Renderer.RenderNode().
