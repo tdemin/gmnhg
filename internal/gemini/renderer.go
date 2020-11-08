@@ -5,6 +5,7 @@ package gemini
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 
 	"github.com/gomarkdown/markdown/ast"
@@ -15,6 +16,8 @@ var (
 	space       = []byte{' '}
 	linkPrefix  = []byte("=> ")
 	quotePrefix = []byte("> ")
+	itemPrefix  = []byte("* ")
+	itemIndent  = []byte{'\t'}
 )
 
 // Renderer implements markdown.Renderer.
@@ -24,8 +27,6 @@ type Renderer struct{}
 func NewRenderer() Renderer {
 	return Renderer{}
 }
-
-// TODO: lists
 
 func (r Renderer) link(w io.Writer, node *ast.Link, entering bool) {
 	if entering {
@@ -188,6 +189,46 @@ func (r Renderer) code(w io.Writer, node *ast.CodeBlock) {
 	w.Write([]byte("```\n"))
 }
 
+func (r Renderer) list(w io.Writer, node *ast.List, level int) {
+	// the text/gemini spec included with the current Gemini spec does
+	// not specify anything about the formatting of lists of level >= 2,
+	// as of now this will just render them like in Markdown
+	isNumbered := (node.ListFlags & ast.ListTypeOrdered) == ast.ListTypeOrdered
+	for number, item := range node.Children {
+		item, ok := item.(*ast.ListItem)
+		if !ok {
+			panic("rendering anything but list items is not supported")
+		}
+		// this assumes github.com/gomarkdown/markdown can only produce
+		// list items that contain a child paragraph and possibly
+		// another list; this might not be true but I can hardly imagine
+		// a list item that contains anything else
+		if l := len(item.Children); l >= 1 {
+			for i := 0; i < level; i++ {
+				w.Write(itemIndent)
+			}
+			if isNumbered {
+				w.Write([]byte(fmt.Sprintf("%d. ", number+1)))
+			} else {
+				w.Write(itemPrefix)
+			}
+			para, ok := item.Children[0].(*ast.Paragraph)
+			if ok {
+				text, ok := para.Children[0].(*ast.Text)
+				if ok {
+					r.text(w, text)
+				}
+			}
+			w.Write(lineBreak)
+			if l >= 2 {
+				if list, ok := item.Children[1].(*ast.List); ok {
+					r.list(w, list, level+1)
+				}
+			}
+		}
+	}
+}
+
 func (r Renderer) text(w io.Writer, node *ast.Text) {
 	w.Write(node.Literal)
 }
@@ -207,13 +248,21 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	case *ast.Paragraph:
 		// blockquote wraps paragraphs which makes for an extra render
 		_, parentIsBlockQuote := node.Parent.(*ast.BlockQuote)
-		if !parentIsBlockQuote {
+		_, parentIsListItem := node.Parent.(*ast.ListItem)
+		if !parentIsBlockQuote && !parentIsListItem {
 			noNewLine = r.paragraph(w, node, entering)
 		}
 	case *ast.CodeBlock:
 		r.code(w, node)
 		// code block is not considered a wrapping element
 		w.Write(lineBreak)
+	case *ast.List:
+		// lists of level >= 2 are rendered recursively along with the
+		// first level; the list is a container
+		if _, parentIsDocument := node.Parent.(*ast.Document); parentIsDocument && !entering {
+			r.list(w, node, 0)
+			noNewLine = false
+		}
 	}
 	if !noNewLine && !entering {
 		w.Write(lineBreak)
