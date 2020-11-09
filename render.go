@@ -48,6 +48,9 @@ var yamlDelimiter = []byte("---\n")
 // RenderMarkdown converts Markdown text to text/gemini using
 // gomarkdown, appending Hugo YAML front matter data if any is present
 // to the post header.
+//
+// Only a subset of front matter data parsed by Hugo is included in the
+// final document. At this point it's just title and date.
 func RenderMarkdown(md []byte) (geminiText []byte, err error) {
 	var metadata hugoMetadata
 	if len(md) > len(yamlDelimiter)*2 {
