@@ -150,8 +150,8 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 		// current version of gomarkdown/markdown finds an empty
 		// *ast.Text element before links/images, breaking the heuristic
 		onlyElementWithGoMarkdownFix := func() bool {
-			if len(node.Children) > 1 {
-				firstChild := node.Children[0]
+			if len(children) == 2 {
+				firstChild := children[0]
 				_, elementIsText := firstChild.(*ast.Text)
 				asLeaf := firstChild.AsLeaf()
 				if elementIsText && asLeaf != nil && len(asLeaf.Literal) == 0 {
@@ -163,7 +163,7 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 		}()
 		onlyElement := len(children) == 1 || onlyElementWithGoMarkdownFix
 		onlyElementIsLink := func() bool {
-			if len(children) >= 1 {
+			if len(children) == 1 {
 				if _, ok := children[0].(*ast.Link); ok {
 					return true
 				}
