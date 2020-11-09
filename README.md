@@ -38,7 +38,7 @@ Usage of md2gmn:
 ## TODO
 
 + [x] convert Markdown text to Gemtext
-+ [ ] prepend contents of YAML front matter to Gemtext data
++ [x] prepend contents of YAML front matter to Gemtext data
 + [ ] render all Hugo content files to Gemtext in accordance with front
   matter data and Hugo config
 
