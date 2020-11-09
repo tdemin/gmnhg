@@ -14,20 +14,64 @@
 // along with gmnhg. If not, see <https://www.gnu.org/licenses/>.
 
 // Package gemini provides functions to convert Markdown files to
-// Gemtext.
+// Gemtext. It supports the use of YAML front matter in Markdown.
 package gemini
 
 import (
+	"bytes"
+	"fmt"
+	"time"
+
 	"git.tdem.in/tdemin/gmnhg/internal/gemini"
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/parser"
+	"gopkg.in/yaml.v2"
 )
 
-// RenderMarkdown converts Markdown text to text/gemini using gomarkdown.
-//
-// gomarkdown doesn't return any errors, nor does this function.
-func RenderMarkdown(md []byte) (geminiText []byte) {
+// hugoMetadata implements gemini.Metadata, providing the bare minimum
+// of possible post props.
+type hugoMetadata struct {
+	PostTitle string    `yaml:"title"`
+	PostDate  time.Time `yaml:"date"`
+}
+
+func (h hugoMetadata) Title() string {
+	return h.PostTitle
+}
+
+func (h hugoMetadata) Date() time.Time {
+	return h.PostDate
+}
+
+var yamlDelimiter = []byte("---\n")
+
+// RenderMarkdown converts Markdown text to text/gemini using
+// gomarkdown, appending Hugo YAML front matter data if any is present
+// to the post header.
+func RenderMarkdown(md []byte) (geminiText []byte, err error) {
+	var metadata hugoMetadata
+	if len(md) > len(yamlDelimiter)*2 {
+		// only allow front matter at file start
+		if bytes.Index(md, yamlDelimiter) != 0 {
+			goto parse
+		}
+		blockEnd := bytes.Index(md[len(yamlDelimiter):], yamlDelimiter)
+		if blockEnd == -1 {
+			goto parse
+		}
+		yamlContent := md[len(yamlDelimiter) : blockEnd+len(yamlDelimiter)]
+		if err := yaml.Unmarshal(yamlContent, &metadata); err != nil {
+			return nil, fmt.Errorf("invalid front matter: %w", err)
+		}
+		md = md[blockEnd+len(yamlDelimiter)*2:]
+	}
+parse:
 	ast := markdown.Parse(md, parser.NewWithExtensions(parser.CommonExtensions))
-	geminiContent := markdown.Render(ast, gemini.NewRenderer())
-	return geminiContent
+	var geminiContent []byte
+	if metadata.PostTitle != "" {
+		geminiContent = markdown.Render(ast, gemini.NewRendererWithMetadata(metadata))
+	} else {
+		geminiContent = markdown.Render(ast, gemini.NewRenderer())
+	}
+	return geminiContent, nil
 }

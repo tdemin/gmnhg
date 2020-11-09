@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/gomarkdown/markdown/ast"
 )
@@ -35,12 +36,28 @@ var (
 	itemIndent  = []byte{'\t'}
 )
 
+const timestampFormat = "2006-01-02 15:04"
+
+// Metadata provides data necessary for proper post rendering.
+type Metadata interface {
+	Title() string
+	Date() time.Time
+}
+
 // Renderer implements markdown.Renderer.
-type Renderer struct{}
+type Renderer struct {
+	Metadata Metadata
+}
 
 // NewRenderer returns a new Renderer.
 func NewRenderer() Renderer {
 	return Renderer{}
+}
+
+// NewRendererWithMetadata returns a new Renderer initialized with post
+// metadata.
+func NewRendererWithMetadata(m Metadata) Renderer {
+	return Renderer{Metadata: m}
 }
 
 func (r Renderer) link(w io.Writer, node *ast.Link, entering bool) {
@@ -290,12 +307,15 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	return ast.GoToNext
 }
 
-// RenderHeader implements Renderer.RenderHeader().
+// RenderHeader implements Renderer.RenderHeader(). It renders metadata
+// at the top of the post if any has been provided.
 func (r Renderer) RenderHeader(w io.Writer, node ast.Node) {
-	// likely doesn't need any code
+	if r.Metadata != nil {
+		// TODO: Renderer.RenderHeader: check whether date is mandatory
+		// in Hugo
+		w.Write([]byte(fmt.Sprintf("# %s\n\n%s\n\n", r.Metadata.Title(), r.Metadata.Date().Format(timestampFormat))))
+	}
 }
 
 // RenderFooter implements Renderer.RenderFooter().
-func (r Renderer) RenderFooter(w io.Writer, node ast.Node) {
-	// likely doesn't need any code either
-}
+func (r Renderer) RenderFooter(w io.Writer, node ast.Node) {}
