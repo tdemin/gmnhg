@@ -52,22 +52,24 @@ var yamlDelimiter = []byte("---\n")
 // Only a subset of front matter data parsed by Hugo is included in the
 // final document. At this point it's just title and date.
 func RenderMarkdown(md []byte) (geminiText []byte, err error) {
-	var metadata hugoMetadata
-	if len(md) > len(yamlDelimiter)*2 {
-		// only allow front matter at file start
-		if bytes.Index(md, yamlDelimiter) != 0 {
-			goto parse
-		}
-		blockEnd := bytes.Index(md[len(yamlDelimiter):], yamlDelimiter)
-		if blockEnd == -1 {
-			goto parse
-		}
-		yamlContent := md[len(yamlDelimiter) : blockEnd+len(yamlDelimiter)]
-		if err := yaml.Unmarshal(yamlContent, &metadata); err != nil {
-			return nil, fmt.Errorf("invalid front matter: %w", err)
-		}
-		md = md[blockEnd+len(yamlDelimiter)*2:]
+	var (
+		metadata    hugoMetadata
+		blockEnd    int
+		yamlContent []byte
+	)
+	// only allow front matter at file start
+	if bytes.Index(md, yamlDelimiter) != 0 {
+		goto parse
 	}
+	blockEnd = bytes.Index(md[len(yamlDelimiter):], yamlDelimiter)
+	if blockEnd == -1 {
+		goto parse
+	}
+	yamlContent = md[len(yamlDelimiter) : blockEnd+len(yamlDelimiter)]
+	if err := yaml.Unmarshal(yamlContent, &metadata); err != nil {
+		return nil, fmt.Errorf("invalid front matter: %w", err)
+	}
+	md = md[blockEnd+len(yamlDelimiter)*2:]
 parse:
 	ast := markdown.Parse(md, parser.NewWithExtensions(parser.CommonExtensions))
 	var geminiContent []byte
