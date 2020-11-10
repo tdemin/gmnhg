@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/gomarkdown/markdown/ast"
@@ -266,7 +267,9 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 
 func (r Renderer) text(w io.Writer, node ast.Node) {
 	if node := node.AsLeaf(); node != nil {
-		w.Write(node.Literal)
+		// replace all newlines in text with spaces, allowing for soft
+		// wrapping; this is recommended as per Gemini spec p. 5.4.1
+		w.Write([]byte(strings.ReplaceAll(string(node.Literal), "\n", " ")))
 	}
 }
 
