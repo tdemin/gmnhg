@@ -19,6 +19,7 @@ package gemini
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"time"
 
@@ -28,22 +29,30 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// hugoMetadata implements gemini.Metadata, providing the bare minimum
+// HugoMetadata implements gemini.Metadata, providing the bare minimum
 // of possible post props.
-type hugoMetadata struct {
-	PostTitle string    `yaml:"title"`
-	PostDate  time.Time `yaml:"date"`
+type HugoMetadata struct {
+	PostTitle   string    `yaml:"title"`
+	PostIsDraft bool      `yaml:"draft"`
+	PostLayout  string    `yaml:"layout"`
+	PostDate    time.Time `yaml:"date"`
 }
 
-func (h hugoMetadata) Title() string {
+// Title returns post title.
+func (h HugoMetadata) Title() string {
 	return h.PostTitle
 }
 
-func (h hugoMetadata) Date() time.Time {
+// Date returns post date.
+func (h HugoMetadata) Date() time.Time {
 	return h.PostDate
 }
 
 var yamlDelimiter = []byte("---\n")
+
+// ErrPostIsDraft indicates the post rendered is a draft and is not
+// supposed to be rendered.
+var ErrPostIsDraft = errors.New("post is draft")
 
 // RenderMarkdown converts Markdown text to text/gemini using
 // gomarkdown, appending Hugo YAML front matter data if any is present
@@ -51,9 +60,11 @@ var yamlDelimiter = []byte("---\n")
 //
 // Only a subset of front matter data parsed by Hugo is included in the
 // final document. At this point it's just title and date.
-func RenderMarkdown(md []byte) (geminiText []byte, err error) {
+//
+// Draft posts are still rendered, but with an error of type
+// ErrPostIsDraft.
+func RenderMarkdown(md []byte, withMetadata bool) (geminiText []byte, metadata HugoMetadata, err error) {
 	var (
-		metadata    hugoMetadata
 		blockEnd    int
 		yamlContent []byte
 	)
@@ -67,16 +78,19 @@ func RenderMarkdown(md []byte) (geminiText []byte, err error) {
 	}
 	yamlContent = md[len(yamlDelimiter) : blockEnd+len(yamlDelimiter)]
 	if err := yaml.Unmarshal(yamlContent, &metadata); err != nil {
-		return nil, fmt.Errorf("invalid front matter: %w", err)
+		return nil, metadata, fmt.Errorf("invalid front matter: %w", err)
 	}
 	md = md[blockEnd+len(yamlDelimiter)*2:]
 parse:
 	ast := markdown.Parse(md, parser.NewWithExtensions(parser.CommonExtensions))
 	var geminiContent []byte
-	if metadata.PostTitle != "" {
+	if withMetadata && metadata.PostTitle != "" {
 		geminiContent = markdown.Render(ast, gemini.NewRendererWithMetadata(metadata))
 	} else {
 		geminiContent = markdown.Render(ast, gemini.NewRenderer())
 	}
-	return geminiContent, nil
+	if metadata.PostIsDraft {
+		return geminiContent, metadata, fmt.Errorf("%s: %w", metadata.PostTitle, ErrPostIsDraft)
+	}
+	return geminiContent, metadata, nil
 }

@@ -47,7 +47,7 @@ func main() {
 		panic(err)
 	}
 
-	geminiContent, err := gemini.RenderMarkdown(text)
+	geminiContent, _, err := gemini.RenderMarkdown(text, true)
 	if err != nil {
 		panic(err)
 	}
