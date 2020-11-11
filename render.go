@@ -54,6 +54,17 @@ var yamlDelimiter = []byte("---\n")
 // supposed to be rendered.
 var ErrPostIsDraft = errors.New("post is draft")
 
+// MetadataSetting defines whether or not metadata is included in the
+// rendered text.
+type MetadataSetting int
+
+// Metadata settings control the inclusion of metadata in the rendered
+// text.
+const (
+	WithMetadata MetadataSetting = iota
+	WithoutMetadata
+)
+
 // RenderMarkdown converts Markdown text to text/gemini using
 // gomarkdown, appending Hugo YAML front matter data if any is present
 // to the post header.
@@ -63,7 +74,7 @@ var ErrPostIsDraft = errors.New("post is draft")
 //
 // Draft posts are still rendered, but with an error of type
 // ErrPostIsDraft.
-func RenderMarkdown(md []byte, withMetadata bool) (geminiText []byte, metadata HugoMetadata, err error) {
+func RenderMarkdown(md []byte, metadataSetting MetadataSetting) (geminiText []byte, metadata HugoMetadata, err error) {
 	var (
 		blockEnd    int
 		yamlContent []byte
@@ -84,7 +95,7 @@ func RenderMarkdown(md []byte, withMetadata bool) (geminiText []byte, metadata H
 parse:
 	ast := markdown.Parse(md, parser.NewWithExtensions(parser.CommonExtensions))
 	var geminiContent []byte
-	if withMetadata && metadata.PostTitle != "" {
+	if metadataSetting == WithMetadata && metadata.PostTitle != "" {
 		geminiContent = markdown.Render(ast, gemini.NewRendererWithMetadata(metadata))
 	} else {
 		geminiContent = markdown.Render(ast, gemini.NewRenderer())
