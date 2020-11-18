@@ -18,8 +18,6 @@
 package gemini
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"io"
 	"strings"
@@ -65,30 +63,8 @@ func (r Renderer) link(w io.Writer, node *ast.Link, entering bool) {
 	if entering {
 		w.Write(linkPrefix)
 		w.Write(node.Destination)
-		for _, child := range node.Children {
-			if l := child.AsLeaf(); l != nil {
-				w.Write(space)
-				w.Write(l.Literal)
-			}
-		}
-	}
-}
-
-func (r Renderer) linkText(w io.Writer, node *ast.Link) {
-	for _, text := range node.Children {
-		// TODO: Renderer.linkText: link can contain subblocks
-		if l := text.AsLeaf(); l != nil {
-			w.Write(l.Literal)
-		}
-	}
-}
-
-func (r Renderer) imageText(w io.Writer, node *ast.Image) {
-	for _, text := range node.Children {
-		// TODO: Renderer.imageText: link can contain subblocks
-		if l := text.AsLeaf(); l != nil {
-			w.Write(l.Literal)
-		}
+		w.Write(space)
+		r.text(w, node)
 	}
 }
 
@@ -96,15 +72,8 @@ func (r Renderer) image(w io.Writer, node *ast.Image, entering bool) {
 	if entering {
 		w.Write(linkPrefix)
 		w.Write(node.Destination)
-		for _, sub := range node.Container.Children {
-			if l := sub.AsLeaf(); l != nil {
-				// TODO: Renderer.image: Markdown technically allows for
-				// links inside image titles, yet to think out how to
-				// render that :thinking:
-				w.Write(space)
-				w.Write(l.Literal)
-			}
-		}
+		w.Write(space)
+		r.text(w, node)
 	}
 }
 
@@ -113,16 +82,8 @@ func (r Renderer) blockquote(w io.Writer, node *ast.BlockQuote, entering bool) {
 	// ideally to be merged with paragraph
 	if entering {
 		if para, ok := node.Children[0].(*ast.Paragraph); ok {
-			for _, subnode := range para.Children {
-				if l := subnode.AsLeaf(); l != nil {
-					reader := bufio.NewScanner(bytes.NewBuffer(l.Literal))
-					for reader.Scan() {
-						w.Write(quotePrefix)
-						w.Write(reader.Bytes())
-						w.Write(lineBreak)
-					}
-				}
-			}
+			w.Write(quotePrefix)
+			r.text(w, para)
 		}
 	}
 }
@@ -178,23 +139,14 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 		for _, child := range children {
 			// only render links text in the paragraph if they're
 			// combined with some other text on page
-			if link, ok := child.(*ast.Link); ok {
+			switch child := child.(type) {
+			case *ast.Link, *ast.Image:
 				if !onlyElement {
-					r.linkText(w, link)
+					r.text(w, child)
 				}
-				linkStack = append(linkStack, link)
-			}
-			if image, ok := child.(*ast.Image); ok {
-				if !onlyElement {
-					r.imageText(w, image)
-				}
-				linkStack = append(linkStack, image)
-			}
-			if text, ok := child.(*ast.Text); ok {
-				r.text(w, text)
-			}
-			if inlineBlock, ok := child.(*ast.Code); ok {
-				r.text(w, inlineBlock)
+				linkStack = append(linkStack, child)
+			case *ast.Text, *ast.Code, *ast.Emph, *ast.Strong, *ast.Del:
+				r.text(w, child)
 			}
 		}
 		if !onlyElementIsLink {
@@ -250,10 +202,7 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 			}
 			para, ok := item.Children[0].(*ast.Paragraph)
 			if ok {
-				text, ok := para.Children[0].(*ast.Text)
-				if ok {
-					r.text(w, text)
-				}
+				r.text(w, para)
 			}
 			w.Write(lineBreak)
 			if l >= 2 {
@@ -270,6 +219,12 @@ func (r Renderer) text(w io.Writer, node ast.Node) {
 		// replace all newlines in text with spaces, allowing for soft
 		// wrapping; this is recommended as per Gemini spec p. 5.4.1
 		w.Write([]byte(strings.ReplaceAll(string(node.Literal), "\n", " ")))
+		return
+	}
+	if node := node.AsContainer(); node != nil {
+		for _, child := range node.Children {
+			r.text(w, child)
+		}
 	}
 }
 
