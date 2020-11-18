@@ -56,6 +56,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"io"
 	"io/ioutil"
@@ -192,12 +193,11 @@ func main() {
 			return err
 		}
 		gemText, metadata, err := gemini.RenderMarkdown(fileContent, gemini.WithoutMetadata)
-		if err != nil {
-			return err
-		}
 		// skip drafts from rendering
-		if metadata.PostIsDraft {
+		if errors.Is(err, gemini.ErrPostIsDraft) {
 			return nil
+		} else if err != nil {
+			return err
 		}
 		key := strings.TrimPrefix(strings.TrimSuffix(path, ".md"), contentBase) + ".gmi"
 		p := post{
