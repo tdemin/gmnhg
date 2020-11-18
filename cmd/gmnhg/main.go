@@ -229,9 +229,14 @@ func main() {
 		}
 	}
 
+	var singleTemplate = defaultSingleTemplate
+	if tmpl, hasTmpl := templates["single"]; hasTmpl {
+		singleTemplate = tmpl
+	}
+
 	// render posts to files
 	for fileName, post := range posts {
-		var tmpl = defaultSingleTemplate
+		var tmpl = singleTemplate
 		if pl := post.Metadata.PostLayout; pl != "" {
 			t, ok := templates[pl]
 			if !ok {
