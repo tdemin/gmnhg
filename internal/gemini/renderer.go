@@ -20,6 +20,7 @@ package gemini
 import (
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 	"time"
 
@@ -34,6 +35,8 @@ var (
 	itemPrefix  = []byte("* ")
 	itemIndent  = []byte{'\t'}
 )
+
+var meaningfulCharsRegex = regexp.MustCompile(`\A[\s]+\z`)
 
 const timestampFormat = "2006-01-02 15:04"
 
@@ -111,50 +114,57 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 		linkStack := make([]ast.Node, 0, len(children))
 		// current version of gomarkdown/markdown finds an empty
 		// *ast.Text element before links/images, breaking the heuristic
-		onlyElementWithGoMarkdownFix := func() bool {
-			if len(children) == 2 {
-				firstChild := children[0]
-				_, elementIsText := firstChild.(*ast.Text)
-				asLeaf := firstChild.AsLeaf()
-				if elementIsText && asLeaf != nil && len(asLeaf.Literal) == 0 {
-					children = children[1:]
-					return true
-				}
+		if len(children) >= 2 {
+			firstChild := children[0]
+			_, elementIsText := firstChild.(*ast.Text)
+			asLeaf := firstChild.AsLeaf()
+			if elementIsText && asLeaf != nil && len(asLeaf.Literal) == 0 {
+				children = children[1:]
 			}
-			return false
-		}()
-		onlyElement := len(children) == 1 || onlyElementWithGoMarkdownFix
-		onlyElementIsLink := func() bool {
-			if len(children) == 1 {
-				if _, ok := children[0].(*ast.Link); ok {
-					return true
+		}
+		linksOnly := func() bool {
+			for _, child := range children {
+				if _, ok := child.(*ast.Link); ok {
+					continue
 				}
-				if _, ok := children[0].(*ast.Image); ok {
-					return true
+				if _, ok := child.(*ast.Image); ok {
+					continue
 				}
+				if child, ok := child.(*ast.Text); ok {
+					// any meaningful text?
+					if meaningfulCharsRegex.Find(child.Literal) == nil {
+						return false
+					}
+					continue
+				}
+				return false
 			}
-			return false
+			return true
 		}()
-		noNewLine = onlyElementIsLink
+		noNewLine = linksOnly
 		for _, child := range children {
 			// only render links text in the paragraph if they're
 			// combined with some other text on page
 			switch child := child.(type) {
 			case *ast.Link, *ast.Image:
-				if !onlyElement {
+				if !linksOnly {
 					r.text(w, child)
 				}
 				linkStack = append(linkStack, child)
 			case *ast.Text, *ast.Code, *ast.Emph, *ast.Strong, *ast.Del:
-				r.text(w, child)
+				// the condition prevents text blocks consisting only of
+				// line breaks and spaces and such from rendering
+				if !linksOnly {
+					r.text(w, child)
+				}
 			}
 		}
-		if !onlyElementIsLink {
+		if !linksOnly {
 			w.Write(lineBreak)
 		}
 		// render a links block after paragraph
 		if len(linkStack) > 0 {
-			if !onlyElementIsLink {
+			if !linksOnly {
 				w.Write(lineBreak)
 			}
 			for _, link := range linkStack {
