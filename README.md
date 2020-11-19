@@ -24,7 +24,7 @@ being unable to parse links/images inside other links.
 ## gmnhg
 
 This program converts Hugo Markdown content files from `content/` in
-accordance with templates found in `layouts/gmnhg` to the output dir. It
+accordance with templates found in `gmnhg/` to the output dir. It
 also copies static files from `static/` to the output dir.
 
 For more details about the rendering process, see the

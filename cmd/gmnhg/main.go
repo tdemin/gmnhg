@@ -19,7 +19,7 @@
 //
 // gmngh will read layout template files (with .gotmpl extension) and
 // then apply them to content files ending with .md by the following
-// algorithm (layout file names are relative to layouts/gmnhg):
+// algorithm (layout file names are relative to gmnhg/):
 //
 // 1. If the .md file specifies its own layout, the relevant layout file
 // is applied. If not, the default template is applied (single). If the
@@ -87,7 +87,7 @@ const (
 
 const (
 	contentBase  = "content/"
-	templateBase = "layouts/gmnhg/"
+	templateBase = "gmnhg/"
 	staticBase   = "static/"
 	outputBase   = "output/"
 )
