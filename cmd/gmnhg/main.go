@@ -19,7 +19,7 @@
 //
 // gmngh will read layout template files (with .gotmpl extension) and
 // then apply them to content files ending with .md by the following
-// algorithm (file names are relative to layouts/gmnhg):
+// algorithm (layout file names are relative to layouts/gmnhg):
 //
 // 1. If the .md file specifies its own layout, the relevant layout file
 // is applied. If not, the default template is applied (single). If the
@@ -28,9 +28,11 @@
 //
 // 2. For every top-level content directory an index.gmi is generated,
 // the corresponding template is taken from top/{directory_name}.gotmpl.
-// If there's no matching template, the index won't be rendered.
+// Its content is taken from _index.gmi.md in that dir. If there's no
+// matching template or no _index.gmi.md, the index won't be rendered.
 //
-// 3. The very top index.gmi is generated from index.gotmpl.
+// 3. The very top index.gmi is generated from index.gotmpl and
+// top-level _index.gmi.
 //
 // The program will then copy static files from static/ directory to the
 // output dir.
@@ -43,15 +45,22 @@
 // content dir (with .md replaced with .gmi).
 //
 // 2. Directory index pages are passed .Posts, which is a slice over
-// post metadata crawled (see HugoMetadata), and .Dirname, which is
-// directory name relative to content dir.
+// post metadata crawled (see HugoMetadata), .Dirname, which is
+// directory name relative to content dir, and .Content, which is
+// rendered from directory's _index.gmi.md.
 //
 // 3. The top-level index.gmi is passed with the .PostData map whose
 // keys are top-level content directories names and values are slices
-// over the same post props as specified in 1.
+// over the same post props as specified in 1, and .Content, which is
+// rendered from top-level _index.gmi.md.
 //
 // This program provides some extra template functions, documented in
 // templates.go.
+//
+// One might want to ignore _index.gmi.md files with the following Hugo
+// config option in config.toml:
+//
+//  ignoreFiles = [ "_index\\.gmi\\.md$" ]
 package main
 
 import (
@@ -70,7 +79,11 @@ import (
 	gemini "git.tdem.in/tdemin/gmnhg"
 )
 
-const defaultTemplate = "single"
+const (
+	defaultTemplate = "single"
+	indexMdFilename = "_index.gmi.md"
+	indexFilename   = "index.gmi"
+)
 
 const (
 	contentBase  = "content/"
@@ -80,7 +93,7 @@ const (
 )
 
 var (
-	tmplNameRegex     = regexp.MustCompile(templateBase + `(\w+)\.gotmpl`)
+	tmplNameRegex     = regexp.MustCompile(templateBase + `([\w-_ /]+)\.gotmpl`)
 	contentNameRegex  = regexp.MustCompile(contentBase + `([\w-_ ]+)\.md`)
 	topLevelPostRegex = regexp.MustCompile(contentBase + `([\w-_ ]+)/([\w-_ ]+)\.md`)
 )
@@ -259,14 +272,27 @@ func main() {
 		if !hasTmpl {
 			continue
 		}
-		buf := bytes.Buffer{}
-		if err := tmpl.Execute(&buf, map[string]interface{}{
-			"Posts":   posts,
-			"Dirname": dirname,
-		}); err != nil {
+		content, err := ioutil.ReadFile(path.Join(contentBase, dirname, indexMdFilename))
+		if err != nil {
+			// skip unreadable index files
+			continue
+		}
+		gemtext, _, err := gemini.RenderMarkdown(content, gemini.WithoutMetadata)
+		if errors.Is(err, gemini.ErrPostIsDraft) {
+			continue
+		} else if err != nil {
 			panic(err)
 		}
-		if err := writeFile(path.Join(outputDir, dirname, "index.gmi"), buf.Bytes()); err != nil {
+		cnt := map[string]interface{}{
+			"Posts":   posts,
+			"Dirname": dirname,
+			"Content": gemtext,
+		}
+		buf := bytes.Buffer{}
+		if err := tmpl.Execute(&buf, cnt); err != nil {
+			panic(err)
+		}
+		if err := writeFile(path.Join(outputDir, dirname, indexFilename), buf.Bytes()); err != nil {
 			panic(err)
 		}
 	}
@@ -275,11 +301,20 @@ func main() {
 	if t, hasIndexTmpl := templates["index"]; hasIndexTmpl {
 		indexTmpl = t
 	}
-	buf := bytes.Buffer{}
-	if err := indexTmpl.Execute(&buf, map[string]interface{}{"PostData": topLevelPosts}); err != nil {
+	indexContent, err := ioutil.ReadFile(path.Join(contentBase, indexMdFilename))
+	if err != nil {
 		panic(err)
 	}
-	if err := writeFile(path.Join(outputDir, "index.gmi"), buf.Bytes()); err != nil {
+	gemtext, _, err := gemini.RenderMarkdown(indexContent, gemini.WithoutMetadata)
+	if err != nil && !errors.Is(err, gemini.ErrPostIsDraft) {
+		panic(err)
+	}
+	buf := bytes.Buffer{}
+	cnt := map[string]interface{}{"PostData": topLevelPosts, "Content": gemtext}
+	if err := indexTmpl.Execute(&buf, cnt); err != nil {
+		panic(err)
+	}
+	if err := writeFile(path.Join(outputDir, indexFilename), buf.Bytes()); err != nil {
 		panic(err)
 	}
 

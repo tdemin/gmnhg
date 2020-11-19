@@ -58,6 +58,7 @@ var defaultSingleTemplate = mustParseTmpl("single", `# {{ .Metadata.PostTitle }}
 
 var defaultIndexTemplate = mustParseTmpl("index", `# Site index
 
+{{ with .Content }}{{ printf "%s" . -}}{{ end }}
 {{ range $dir, $posts := .PostData }}Index of {{ $dir }}:
 
 {{ range $p := $posts | sortPosts }}=> {{ $p.Link }} {{ $p.Metadata.PostDate.Format "2006-01-02 15:04" }} - {{ $p.Metadata.PostTitle }}
