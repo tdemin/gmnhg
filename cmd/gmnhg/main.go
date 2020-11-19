@@ -198,7 +198,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		if n := info.Name(); info.IsDir() || !strings.HasSuffix(n, ".md") || n == "_index.md" {
+		if n := info.Name(); info.IsDir() || !strings.HasSuffix(n, ".md") || n == "_index.md" || n == indexMdFilename {
 			return nil
 		}
 		fileContent, err := ioutil.ReadFile(path)
