@@ -1,5 +1,7 @@
 # Hugo-to-Gemini converter
 
+[![PkgGoDev](https://pkg.go.dev/badge/git.tdem.in/tdemin/gmnhg)](https://pkg.go.dev/git.tdem.in/tdemin/gmnhg)
+
 This repo holds a converter of Hugo Markdown posts to
 [text/gemini][Gemtext] (also named Gemtext in this README). The
 converter is supposed to make people using [Hugo](https://gohugo.io)'s
