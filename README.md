@@ -1,5 +1,7 @@
 # Hugo-to-Gemini converter
 
+[![PkgGoDev](https://pkg.go.dev/badge/git.tdem.in/tdemin/gmnhg)](https://pkg.go.dev/git.tdem.in/tdemin/gmnhg)
+
 This repo holds a converter of Hugo Markdown posts to
 [text/gemini][Gemtext] (also named Gemtext in this README). The
 converter is supposed to make people using [Hugo](https://gohugo.io)'s
@@ -9,10 +11,6 @@ simpler.
 [Gemini]: https://gemini.circumlunar.space
 [Gemtext]: https://gemini.circumlunar.space/docs/specification.html
 
-At this stage of development this repo contains the actual renderer
-(`internal/gemini`) and the `md2gmn` program that converts Markdown
-input to Gemtext and is supposed to facilitate testing.
-
 The renderer is somewhat hasty, and is NOT supposed to be able to
 convert the entirety of possible Markdown to Gemtext (as it's not
 possible to do so, considering Gemtext is a lot simpler than Markdown),
@@ -20,9 +18,27 @@ but instead a selected subset of it, enough for conveying your mind in
 Markdown.
 
 The renderer uses the [gomarkdown][gomarkdown] library for parsing
-Markdown.
+Markdown. gomarkdown has a few quirks at this time, the most notable one
+being unable to parse links/images inside other links.
 
 [gomarkdown]: https://github.com/gomarkdown/markdown
+
+## gmnhg
+
+This program converts Hugo Markdown content files from `content/` in
+accordance with templates found in `gmnhg/` to the output dir. It
+also copies static files from `static/` to the output dir.
+
+For more details about the rendering process, see the
+[doc](cmd/gmnhg/main.go) attached to the program.
+
+```
+Usage of gmnhg:
+  -output string
+        output directory (will be created if missing) (default "output/")
+  -working string
+        working directory (defaults to current directory)
+```
 
 ## md2gmn
 
@@ -35,15 +51,11 @@ Usage of md2gmn:
         input file
 ```
 
-## TODO
-
-+ [x] convert Markdown text to Gemtext
-+ [ ] prepend contents of YAML front matter to Gemtext data
-+ [ ] render all Hugo content files to Gemtext in accordance with front
-  matter data and Hugo config
+md2gmn is mainly made to facilitate testing the Gemtext renderer but
+can be used as a standalone program as well.
 
 ## License
 
 This program is redistributed under the terms and conditions of the GNU
-General Public License, more specifically under version 3 of the
-License. For details, see [COPYING](COPYING).
+General Public License, more specifically version 3 of the License. For
+details, see [COPYING](COPYING).

@@ -18,10 +18,11 @@
 package gemini
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"io"
+	"regexp"
+	"strings"
+	"time"
 
 	"github.com/gomarkdown/markdown/ast"
 )
@@ -35,42 +36,38 @@ var (
 	itemIndent  = []byte{'\t'}
 )
 
+var meaningfulCharsRegex = regexp.MustCompile(`\A[\s]+\z`)
+
+const timestampFormat = "2006-01-02 15:04"
+
+// Metadata provides data necessary for proper post rendering.
+type Metadata interface {
+	Title() string
+	Date() time.Time
+}
+
 // Renderer implements markdown.Renderer.
-type Renderer struct{}
+type Renderer struct {
+	Metadata Metadata
+}
 
 // NewRenderer returns a new Renderer.
 func NewRenderer() Renderer {
 	return Renderer{}
 }
 
+// NewRendererWithMetadata returns a new Renderer initialized with post
+// metadata.
+func NewRendererWithMetadata(m Metadata) Renderer {
+	return Renderer{Metadata: m}
+}
+
 func (r Renderer) link(w io.Writer, node *ast.Link, entering bool) {
 	if entering {
 		w.Write(linkPrefix)
 		w.Write(node.Destination)
-		for _, child := range node.Children {
-			if l := child.AsLeaf(); l != nil {
-				w.Write(space)
-				w.Write(l.Literal)
-			}
-		}
-	}
-}
-
-func (r Renderer) linkText(w io.Writer, node *ast.Link) {
-	for _, text := range node.Children {
-		// TODO: Renderer.linkText: link can contain subblocks
-		if l := text.AsLeaf(); l != nil {
-			w.Write(l.Literal)
-		}
-	}
-}
-
-func (r Renderer) imageText(w io.Writer, node *ast.Image) {
-	for _, text := range node.Children {
-		// TODO: Renderer.imageText: link can contain subblocks
-		if l := text.AsLeaf(); l != nil {
-			w.Write(l.Literal)
-		}
+		w.Write(space)
+		r.text(w, node)
 	}
 }
 
@@ -78,15 +75,8 @@ func (r Renderer) image(w io.Writer, node *ast.Image, entering bool) {
 	if entering {
 		w.Write(linkPrefix)
 		w.Write(node.Destination)
-		for _, sub := range node.Container.Children {
-			if l := sub.AsLeaf(); l != nil {
-				// TODO: Renderer.image: Markdown technically allows for
-				// links inside image titles, yet to think out how to
-				// render that :thinking:
-				w.Write(space)
-				w.Write(l.Literal)
-			}
-		}
+		w.Write(space)
+		r.text(w, node)
 	}
 }
 
@@ -95,16 +85,8 @@ func (r Renderer) blockquote(w io.Writer, node *ast.BlockQuote, entering bool) {
 	// ideally to be merged with paragraph
 	if entering {
 		if para, ok := node.Children[0].(*ast.Paragraph); ok {
-			for _, subnode := range para.Children {
-				if l := subnode.AsLeaf(); l != nil {
-					reader := bufio.NewScanner(bytes.NewBuffer(l.Literal))
-					for reader.Scan() {
-						w.Write(quotePrefix)
-						w.Write(reader.Bytes())
-						w.Write(lineBreak)
-					}
-				}
-			}
+			w.Write(quotePrefix)
+			r.text(w, para)
 		}
 	}
 }
@@ -132,56 +114,57 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 		linkStack := make([]ast.Node, 0, len(children))
 		// current version of gomarkdown/markdown finds an empty
 		// *ast.Text element before links/images, breaking the heuristic
-		onlyElementWithGoMarkdownFix := func() bool {
-			if len(node.Children) > 1 {
-				firstChild := node.Children[0]
-				_, elementIsText := firstChild.(*ast.Text)
-				asLeaf := firstChild.AsLeaf()
-				if elementIsText && asLeaf != nil && len(asLeaf.Literal) == 0 {
-					children = children[1:]
-					return true
-				}
+		if len(children) >= 2 {
+			firstChild := children[0]
+			_, elementIsText := firstChild.(*ast.Text)
+			asLeaf := firstChild.AsLeaf()
+			if elementIsText && asLeaf != nil && len(asLeaf.Literal) == 0 {
+				children = children[1:]
 			}
-			return false
-		}()
-		onlyElement := len(children) == 1 || onlyElementWithGoMarkdownFix
-		onlyElementIsLink := func() bool {
-			if len(children) >= 1 {
-				if _, ok := children[0].(*ast.Link); ok {
-					return true
+		}
+		linksOnly := func() bool {
+			for _, child := range children {
+				if _, ok := child.(*ast.Link); ok {
+					continue
 				}
-				if _, ok := children[0].(*ast.Image); ok {
-					return true
+				if _, ok := child.(*ast.Image); ok {
+					continue
 				}
+				if child, ok := child.(*ast.Text); ok {
+					// any meaningful text?
+					if meaningfulCharsRegex.Find(child.Literal) == nil {
+						return false
+					}
+					continue
+				}
+				return false
 			}
-			return false
+			return true
 		}()
-		noNewLine = onlyElementIsLink
+		noNewLine = linksOnly
 		for _, child := range children {
 			// only render links text in the paragraph if they're
 			// combined with some other text on page
-			if link, ok := child.(*ast.Link); ok {
-				if !onlyElement {
-					r.linkText(w, link)
+			switch child := child.(type) {
+			case *ast.Link, *ast.Image:
+				if !linksOnly {
+					r.text(w, child)
 				}
-				linkStack = append(linkStack, link)
-			}
-			if image, ok := child.(*ast.Image); ok {
-				if !onlyElement {
-					r.imageText(w, image)
+				linkStack = append(linkStack, child)
+			case *ast.Text, *ast.Code, *ast.Emph, *ast.Strong, *ast.Del:
+				// the condition prevents text blocks consisting only of
+				// line breaks and spaces and such from rendering
+				if !linksOnly {
+					r.text(w, child)
 				}
-				linkStack = append(linkStack, image)
-			}
-			if text, ok := child.(*ast.Text); ok {
-				r.text(w, text)
 			}
 		}
-		if !onlyElementIsLink {
+		if !linksOnly {
 			w.Write(lineBreak)
 		}
 		// render a links block after paragraph
 		if len(linkStack) > 0 {
-			if !onlyElementIsLink {
+			if !linksOnly {
 				w.Write(lineBreak)
 			}
 			for _, link := range linkStack {
@@ -229,10 +212,7 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 			}
 			para, ok := item.Children[0].(*ast.Paragraph)
 			if ok {
-				text, ok := para.Children[0].(*ast.Text)
-				if ok {
-					r.text(w, text)
-				}
+				r.text(w, para)
 			}
 			w.Write(lineBreak)
 			if l >= 2 {
@@ -244,8 +224,18 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 	}
 }
 
-func (r Renderer) text(w io.Writer, node *ast.Text) {
-	w.Write(node.Literal)
+func (r Renderer) text(w io.Writer, node ast.Node) {
+	if node := node.AsLeaf(); node != nil {
+		// replace all newlines in text with spaces, allowing for soft
+		// wrapping; this is recommended as per Gemini spec p. 5.4.1
+		w.Write([]byte(strings.ReplaceAll(string(node.Literal), "\n", " ")))
+		return
+	}
+	if node := node.AsContainer(); node != nil {
+		for _, child := range node.Children {
+			r.text(w, child)
+		}
+	}
 }
 
 // RenderNode implements Renderer.RenderNode().
@@ -285,12 +275,15 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	return ast.GoToNext
 }
 
-// RenderHeader implements Renderer.RenderHeader().
+// RenderHeader implements Renderer.RenderHeader(). It renders metadata
+// at the top of the post if any has been provided.
 func (r Renderer) RenderHeader(w io.Writer, node ast.Node) {
-	// likely doesn't need any code
+	if r.Metadata != nil {
+		// TODO: Renderer.RenderHeader: check whether date is mandatory
+		// in Hugo
+		w.Write([]byte(fmt.Sprintf("# %s\n\n%s\n\n", r.Metadata.Title(), r.Metadata.Date().Format(timestampFormat))))
+	}
 }
 
 // RenderFooter implements Renderer.RenderFooter().
-func (r Renderer) RenderFooter(w io.Writer, node ast.Node) {
-	// likely doesn't need any code either
-}
+func (r Renderer) RenderFooter(w io.Writer, node ast.Node) {}

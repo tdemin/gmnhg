@@ -14,20 +14,94 @@
 // along with gmnhg. If not, see <https://www.gnu.org/licenses/>.
 
 // Package gemini provides functions to convert Markdown files to
-// Gemtext.
+// Gemtext. It supports the use of YAML front matter in Markdown.
 package gemini
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
+	"time"
+
 	"git.tdem.in/tdemin/gmnhg/internal/gemini"
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/parser"
+	"gopkg.in/yaml.v2"
 )
 
-// RenderMarkdown converts Markdown text to text/gemini using gomarkdown.
+// HugoMetadata implements gemini.Metadata, providing the bare minimum
+// of possible post props.
+type HugoMetadata struct {
+	PostTitle   string    `yaml:"title"`
+	PostIsDraft bool      `yaml:"draft"`
+	PostLayout  string    `yaml:"layout"`
+	PostDate    time.Time `yaml:"date"`
+}
+
+// Title returns post title.
+func (h HugoMetadata) Title() string {
+	return h.PostTitle
+}
+
+// Date returns post date.
+func (h HugoMetadata) Date() time.Time {
+	return h.PostDate
+}
+
+var yamlDelimiter = []byte("---\n")
+
+// ErrPostIsDraft indicates the post rendered is a draft and is not
+// supposed to be rendered.
+var ErrPostIsDraft = errors.New("post is draft")
+
+// MetadataSetting defines whether or not metadata is included in the
+// rendered text.
+type MetadataSetting int
+
+// Metadata settings control the inclusion of metadata in the rendered
+// text.
+const (
+	WithMetadata MetadataSetting = iota
+	WithoutMetadata
+)
+
+// RenderMarkdown converts Markdown text to text/gemini using
+// gomarkdown, appending Hugo YAML front matter data if any is present
+// to the post header.
 //
-// gomarkdown doesn't return any errors, nor does this function.
-func RenderMarkdown(md []byte) (geminiText []byte) {
+// Only a subset of front matter data parsed by Hugo is included in the
+// final document. At this point it's just title and date.
+//
+// Draft posts are still rendered, but with an error of type
+// ErrPostIsDraft.
+func RenderMarkdown(md []byte, metadataSetting MetadataSetting) (geminiText []byte, metadata HugoMetadata, err error) {
+	var (
+		blockEnd    int
+		yamlContent []byte
+	)
+	// only allow front matter at file start
+	if bytes.Index(md, yamlDelimiter) != 0 {
+		goto parse
+	}
+	blockEnd = bytes.Index(md[len(yamlDelimiter):], yamlDelimiter)
+	if blockEnd == -1 {
+		goto parse
+	}
+	yamlContent = md[len(yamlDelimiter) : blockEnd+len(yamlDelimiter)]
+	if err := yaml.Unmarshal(yamlContent, &metadata); err != nil {
+		return nil, metadata, fmt.Errorf("invalid front matter: %w", err)
+	}
+	md = md[blockEnd+len(yamlDelimiter)*2:]
+parse:
 	ast := markdown.Parse(md, parser.NewWithExtensions(parser.CommonExtensions))
-	geminiContent := markdown.Render(ast, gemini.NewRenderer())
-	return geminiContent
+	var geminiContent []byte
+	if metadataSetting == WithMetadata && metadata.PostTitle != "" {
+		geminiContent = markdown.Render(ast, gemini.NewRendererWithMetadata(metadata))
+	} else {
+		geminiContent = markdown.Render(ast, gemini.NewRenderer())
+	}
+	if metadata.PostIsDraft {
+		return geminiContent, metadata, fmt.Errorf("%s: %w", metadata.PostTitle, ErrPostIsDraft)
+	}
+	return geminiContent, metadata, nil
 }
