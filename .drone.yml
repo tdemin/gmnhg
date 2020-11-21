@@ -25,3 +25,20 @@ steps:
     - curl -sL https://git.io/goreleaser | bash
   when:
     event: tag
+- name: build docker image
+  image: plugins/docker
+  settings:
+    username:
+      from_secret: username
+    password:
+      from_secret: password
+    repo: registry.git.tdem.in/gmnhg
+    registry: registry.git.tdem.in
+    dockerfile: Dockerfile
+    tags:
+      - ${DRONE_TAG}
+      - latest
+  when:
+    event:
+    - tag
+
