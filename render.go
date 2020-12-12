@@ -54,15 +54,20 @@ var yamlDelimiter = []byte("---\n")
 // supposed to be rendered.
 var ErrPostIsDraft = errors.New("post is draft")
 
-// MetadataSetting defines whether or not metadata is included in the
-// rendered text.
-type MetadataSetting int
+// Settings is a bitmask for renderer preferences.
+type Settings uint
 
-// Metadata settings control the inclusion of metadata in the rendered
-// text.
+// Has uses AND to check whether a flag is set.
+func (s Settings) Has(setting Settings) bool {
+	return (s & setting) != 0
+}
+
 const (
-	WithMetadata MetadataSetting = iota
-	WithoutMetadata
+	// Defaults simply renders the document.
+	Defaults Settings = 0b0
+	// WithMetadata indicates that the metadata should be included in
+	// the text produced by the renderer.
+	WithMetadata Settings = 0b1
 )
 
 // RenderMarkdown converts Markdown text to text/gemini using
@@ -74,7 +79,7 @@ const (
 //
 // Draft posts are still rendered, but with an error of type
 // ErrPostIsDraft.
-func RenderMarkdown(md []byte, metadataSetting MetadataSetting) (geminiText []byte, metadata HugoMetadata, err error) {
+func RenderMarkdown(md []byte, settings Settings) (geminiText []byte, metadata HugoMetadata, err error) {
 	var (
 		blockEnd    int
 		yamlContent []byte
@@ -95,7 +100,7 @@ func RenderMarkdown(md []byte, metadataSetting MetadataSetting) (geminiText []by
 parse:
 	ast := markdown.Parse(md, parser.NewWithExtensions(parser.CommonExtensions))
 	var geminiContent []byte
-	if metadataSetting == WithMetadata && metadata.PostTitle != "" {
+	if settings.Has(WithMetadata) && metadata.PostTitle != "" {
 		geminiContent = markdown.Render(ast, gemini.NewRendererWithMetadata(metadata))
 	} else {
 		geminiContent = markdown.Render(ast, gemini.NewRenderer())

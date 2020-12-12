@@ -98,8 +98,6 @@ var (
 	topLevelPostRegex = regexp.MustCompile(contentBase + `([\w-_ ]+)/([\w-_ ]+)\.md`)
 )
 
-// TODO: more meaningful errors
-
 type post struct {
 	Post     []byte
 	Metadata gemini.HugoMetadata
@@ -205,7 +203,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		gemText, metadata, err := gemini.RenderMarkdown(fileContent, gemini.WithoutMetadata)
+		gemText, metadata, err := gemini.RenderMarkdown(fileContent, gemini.Defaults)
 		// skip drafts from rendering
 		if errors.Is(err, gemini.ErrPostIsDraft) {
 			return nil
@@ -277,7 +275,7 @@ func main() {
 			// skip unreadable index files
 			continue
 		}
-		gemtext, _, err := gemini.RenderMarkdown(content, gemini.WithoutMetadata)
+		gemtext, _, err := gemini.RenderMarkdown(content, gemini.Defaults)
 		if errors.Is(err, gemini.ErrPostIsDraft) {
 			continue
 		} else if err != nil {
@@ -305,7 +303,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	gemtext, _, err := gemini.RenderMarkdown(indexContent, gemini.WithoutMetadata)
+	gemtext, _, err := gemini.RenderMarkdown(indexContent, gemini.Defaults)
 	if err != nil && !errors.Is(err, gemini.ErrPostIsDraft) {
 		panic(err)
 	}
