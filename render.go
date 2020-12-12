@@ -48,7 +48,10 @@ func (h HugoMetadata) Date() time.Time {
 	return h.PostDate
 }
 
-var yamlDelimiter = []byte("---\n")
+var (
+	yamlDelimiter = []byte("---\n")
+	trailing      = []byte("\n\n")
+)
 
 // ErrPostIsDraft indicates the post rendered is a draft and is not
 // supposed to be rendered.
@@ -99,14 +102,20 @@ func RenderMarkdown(md []byte, settings Settings) (geminiText []byte, metadata H
 	md = md[blockEnd+len(yamlDelimiter)*2:]
 parse:
 	ast := markdown.Parse(md, parser.NewWithExtensions(parser.CommonExtensions))
-	var geminiContent []byte
+	var content []byte
 	if settings.Has(WithMetadata) && metadata.PostTitle != "" {
-		geminiContent = markdown.Render(ast, gemini.NewRendererWithMetadata(metadata))
+		content = markdown.Render(ast, gemini.NewRendererWithMetadata(metadata))
 	} else {
-		geminiContent = markdown.Render(ast, gemini.NewRenderer())
+		content = markdown.Render(ast, gemini.NewRenderer())
+	}
+	for li := bytes.LastIndex(content, trailing); li != -1; li = bytes.LastIndex(content, trailing) {
+		if li != len(content)-len(trailing) {
+			break
+		}
+		content = content[:len(content)-1]
 	}
 	if metadata.PostIsDraft {
-		return geminiContent, metadata, fmt.Errorf("%s: %w", metadata.PostTitle, ErrPostIsDraft)
+		return content, metadata, fmt.Errorf("%s: %w", metadata.PostTitle, ErrPostIsDraft)
 	}
-	return geminiContent, metadata, nil
+	return content, metadata, nil
 }
