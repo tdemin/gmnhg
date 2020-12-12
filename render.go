@@ -70,9 +70,9 @@ const (
 	WithMetadata Settings = 0b1
 )
 
-// RenderMarkdown converts Markdown text to text/gemini using
-// gomarkdown, appending Hugo YAML front matter data if any is present
-// to the post header.
+// RenderMarkdown converts Markdown text to Gemtext using gomarkdown. It
+// appends Hugo YAML front matter data to the post header if
+// WithMetadata is set.
 //
 // Only a subset of front matter data parsed by Hugo is included in the
 // final document. At this point it's just title and date.
