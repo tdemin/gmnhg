@@ -318,6 +318,12 @@ func main() {
 
 	// copy static files to output dir unmodified
 	if err := filepath.Walk(staticBase, func(p string, info os.FileInfo, err error) error {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
 		if info.IsDir() {
 			return nil
 		}
