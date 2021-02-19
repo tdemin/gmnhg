@@ -43,6 +43,9 @@ func mustParseTmpl(name, value string) *template.Template {
 var funcMap template.FuncMap = template.FuncMap{
 	// sorts posts by date, newest posts go first
 	"sortPosts": func(posts []*post) []*post {
+		// sortPosts is most likely to be used in a pipeline, and the
+		// user has every right to expect it doesn't modify their
+		// existing posts slice
 		ps := make(postsSort, len(posts))
 		copy(ps, posts)
 		sort.Sort(ps)
