@@ -25,13 +25,22 @@ import (
 	gemini "git.tdem.in/tdemin/gmnhg"
 )
 
+var version = "v0+HEAD"
+
 func main() {
 	var (
-		input string
-		file  *os.File
+		input        string
+		file         *os.File
+		isVersionCmd bool
 	)
 	flag.StringVar(&input, "f", "", "input file")
+	flag.BoolVar(&isVersionCmd, "version", false, "display version")
 	flag.Parse()
+
+	if isVersionCmd {
+		println("md2gmn", version)
+		return
+	}
 
 	if input != "" {
 		var err error

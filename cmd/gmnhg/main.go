@@ -143,11 +143,22 @@ func writeFile(dst string, contents []byte) error {
 	return nil
 }
 
+var version = "v0+HEAD"
+
 func main() {
-	var outputDir, workingDir string
+	var (
+		outputDir, workingDir string
+		isVersionCmd          bool
+	)
 	flag.StringVar(&outputDir, "output", outputBase, "output directory (will be created if missing)")
 	flag.StringVar(&workingDir, "working", "", "working directory (defaults to current directory)")
+	flag.BoolVar(&isVersionCmd, "version", false, "display version")
 	flag.Parse()
+
+	if isVersionCmd {
+		println("gmnhg", version)
+		return
+	}
 
 	if workingDir != "" {
 		if err := os.Chdir(workingDir); err != nil {
