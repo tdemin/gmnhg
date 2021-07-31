@@ -23,9 +23,9 @@ import (
 	"fmt"
 	"time"
 
-	"git.tdem.in/tdemin/gmnhg/internal/gemini"
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/parser"
+	"github.com/tdemin/gmnhg/internal/gemini"
 	"gopkg.in/yaml.v2"
 )
 

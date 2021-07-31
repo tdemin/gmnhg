@@ -1,4 +1,4 @@
-module git.tdem.in/tdemin/gmnhg
+module github.com/tdemin/gmnhg
 
 go 1.15
 

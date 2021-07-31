@@ -76,7 +76,7 @@ import (
 	"strings"
 	"text/template"
 
-	gemini "git.tdem.in/tdemin/gmnhg"
+	gemini "github.com/tdemin/gmnhg"
 )
 
 const (

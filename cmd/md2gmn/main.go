@@ -22,7 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	gemini "git.tdem.in/tdemin/gmnhg"
+	gemini "github.com/tdemin/gmnhg"
 )
 
 var version = "v0+HEAD"

@@ -45,9 +45,6 @@ changelog:
     - '^test:'
 
 release:
-  gitea:
+  github:
     owner: tdemin
     name: gmnhg
-
-gitea_urls:
-  api: https://git.tdem.in/api/v1/
