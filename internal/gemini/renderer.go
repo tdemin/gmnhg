@@ -25,15 +25,17 @@ import (
 	"time"
 
 	"github.com/gomarkdown/markdown/ast"
+	"github.com/olekukonko/tablewriter"
 )
 
 var (
-	lineBreak   = []byte{'\n'}
-	space       = []byte{' '}
-	linkPrefix  = []byte("=> ")
-	quotePrefix = []byte("> ")
-	itemPrefix  = []byte("* ")
-	itemIndent  = []byte{'\t'}
+	lineBreak          = []byte{'\n'}
+	space              = []byte{' '}
+	linkPrefix         = []byte("=> ")
+	quotePrefix        = []byte("> ")
+	itemPrefix         = []byte("* ")
+	itemIndent         = []byte{'\t'}
+	preformattedToggle = []byte("```\n")
 )
 
 var meaningfulCharsRegex = regexp.MustCompile(`\A[\s]+\z`)
@@ -193,9 +195,9 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 }
 
 func (r Renderer) code(w io.Writer, node *ast.CodeBlock) {
-	w.Write([]byte("```\n"))
+	w.Write(preformattedToggle)
 	w.Write(node.Literal)
-	w.Write([]byte("```\n"))
+	w.Write(preformattedToggle)
 }
 
 func (r Renderer) list(w io.Writer, node *ast.List, level int) {
@@ -249,6 +251,76 @@ func (r Renderer) text(w io.Writer, node ast.Node) {
 	}
 }
 
+func extractText(node ast.Node) string {
+	if node := node.AsLeaf(); node != nil {
+		return strings.ReplaceAll(string(node.Literal), "\n", " ")
+	}
+	if node := node.AsContainer(); node != nil {
+		b := strings.Builder{}
+		for _, child := range node.Children {
+			b.WriteString(extractText(child))
+		}
+		return b.String()
+	}
+	panic("encountered a non-leaf & non-container node")
+}
+
+func (r Renderer) tableHead(t *tablewriter.Table, node *ast.TableHeader) {
+	if node := node.AsContainer(); node != nil {
+		// should always have a single row consisting of at least one
+		// cell but worth checking nonetheless; tablewriter only
+		// supports a single header row as of now therefore ignore
+		// second row and the rest
+		if len(node.Children) > 0 {
+			if row := node.Children[0].AsContainer(); row != nil {
+				cells := make([]string, len(row.Children))
+				for i, cell := range row.Children {
+					cells[i] = extractText(cell)
+				}
+				t.SetHeader(cells)
+			}
+		}
+	}
+}
+
+func (r Renderer) tableBody(t *tablewriter.Table, node *ast.TableBody) {
+	if node := node.AsContainer(); node != nil {
+		for _, row := range node.Children {
+			if row := row.AsContainer(); row != nil {
+				cells := make([]string, len(row.Children))
+				for i, cell := range row.Children {
+					cells[i] = extractText(cell)
+				}
+				t.Append(cells)
+			}
+		}
+	}
+}
+
+func (r Renderer) table(w io.Writer, node *ast.Table, entering bool) {
+	if entering {
+		w.Write(preformattedToggle)
+		// gomarkdown appears to only parse headings consisting of a
+		// single line and always have a TableBody preceded by a single
+		// TableHeader but we're better off not relying on it
+		t := tablewriter.NewWriter(w)
+		t.SetAutoFormatHeaders(false) // TODO: tablewriter options should probably be configurable
+		if node := node.AsContainer(); node != nil {
+			for _, child := range node.Children {
+				switch child := child.(type) {
+				case *ast.TableHeader:
+					r.tableHead(t, child)
+				case *ast.TableBody:
+					r.tableBody(t, child)
+				}
+			}
+		}
+		t.Render()
+	} else {
+		w.Write(preformattedToggle)
+	}
+}
+
 // RenderNode implements Renderer.RenderNode().
 func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.WalkStatus {
 	// despite most of the subroutines here accepting entering, most of
@@ -279,6 +351,9 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 			r.list(w, node, 0)
 			noNewLine = false
 		}
+	case *ast.Table:
+		r.table(w, node, entering)
+		noNewLine = false
 	}
 	if !noNewLine && !entering {
 		w.Write(lineBreak)
