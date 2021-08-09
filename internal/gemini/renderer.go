@@ -91,13 +91,24 @@ func (r Renderer) blockquote(w io.Writer, node *ast.BlockQuote, entering bool) {
 	}
 }
 
+const gemtextHeadingLevelLimit = 3
+
 func (r Renderer) heading(w io.Writer, node *ast.Heading, entering bool) {
 	if entering {
-		// pad headings with the relevant number of #-s
-		heading := make([]byte, node.Level+1)
+		// pad headings with the relevant number of #-s; Gemini spec allows 3 at
+		// maximum before the space, therefore add one after 3 and keep padding
+		bufLength := node.Level + 1
+		spaceNeeded := node.Level > gemtextHeadingLevelLimit
+		if spaceNeeded {
+			bufLength++
+		}
+		heading := make([]byte, bufLength)
 		heading[len(heading)-1] = ' '
 		for i := 0; i < len(heading)-1; i++ {
 			heading[i] = '#'
+		}
+		if spaceNeeded {
+			heading[gemtextHeadingLevelLimit] = ' '
 		}
 		w.Write(heading)
 		for _, text := range node.Children {
