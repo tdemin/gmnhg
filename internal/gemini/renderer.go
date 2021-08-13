@@ -18,6 +18,7 @@
 package gemini
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"regexp"
@@ -32,6 +33,7 @@ var (
 	lineBreak          = []byte{'\n'}
 	space              = []byte{' '}
 	linkPrefix         = []byte("=> ")
+	quoteBrPrefix      = []byte("\n> ")
 	quotePrefix        = []byte("> ")
 	itemPrefix         = []byte("* ")
 	itemIndent         = []byte{'\t'}
@@ -86,9 +88,16 @@ func (r Renderer) blockquote(w io.Writer, node *ast.BlockQuote, entering bool) {
 	// TODO: Renderer.blockquote: needs support for subnode rendering;
 	// ideally to be merged with paragraph
 	if entering {
-		if para, ok := node.Children[0].(*ast.Paragraph); ok {
-			w.Write(quotePrefix)
-			r.text(w, para)
+		if node := node.AsContainer(); node != nil {
+			for _, child := range node.Children {
+				w.Write(quotePrefix)
+				r.blockquoteText(w, child)
+				// double linebreak to ensure Gemini clients don't merge
+				// quotes; gomarkdown assumes separate blockquotes are
+				// paragraphs of the same blockquote while we don't
+				w.Write(lineBreak)
+				w.Write(lineBreak)
+			}
 		}
 	}
 }
@@ -137,6 +146,7 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 		}
 		linksOnly := func() bool {
 			for _, child := range children {
+				// TODO: simplify
 				if _, ok := child.(*ast.Link); ok {
 					continue
 				}
@@ -251,6 +261,21 @@ func (r Renderer) text(w io.Writer, node ast.Node) {
 	}
 }
 
+// TODO: this really should've been unified with text(), but having two
+// extra params for prefix/line breaks is not neat
+func (r Renderer) blockquoteText(w io.Writer, node ast.Node) {
+	if node := node.AsLeaf(); node != nil {
+		// pad every line break with blockquote symbol
+		w.Write([]byte(bytes.ReplaceAll(node.Literal, lineBreak, quoteBrPrefix)))
+		return
+	}
+	if node := node.AsContainer(); node != nil {
+		for _, child := range node.Children {
+			r.blockquoteText(w, child)
+		}
+	}
+}
+
 func extractText(node ast.Node) string {
 	if node := node.AsLeaf(); node != nil {
 		return strings.ReplaceAll(string(node.Literal), "\n", " ")
@@ -329,7 +354,6 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	switch node := node.(type) {
 	case *ast.BlockQuote:
 		r.blockquote(w, node, entering)
-		noNewLine = false
 	case *ast.Heading:
 		r.heading(w, node, entering)
 		noNewLine = false
