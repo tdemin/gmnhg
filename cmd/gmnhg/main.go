@@ -80,9 +80,9 @@ import (
 )
 
 const (
-	defaultTemplate = "single"
-	indexMdFilename = "_index.gmi.md"
-	indexFilename   = "index.gmi"
+	defaultPageTemplate = "single"
+	indexMdFilename     = "_index.gmi.md"
+	indexFilename       = "index.gmi"
 )
 
 const (
@@ -94,7 +94,6 @@ const (
 
 var (
 	tmplNameRegex     = regexp.MustCompile(templateBase + `([\w-_ /]+)\.gotmpl`)
-	contentNameRegex  = regexp.MustCompile(contentBase + `([\w-_ ]+)\.md`)
 	topLevelPostRegex = regexp.MustCompile(contentBase + `([\w-_ ]+)/([\w-_ ]+)\.md`)
 )
 
@@ -201,7 +200,7 @@ func main() {
 	}
 
 	// render posts to Gemtext and collect top level posts data
-	posts := make(map[string]*post, 0)
+	posts := make(map[string]*post)
 	topLevelPosts := make(map[string][]*post)
 	if err := filepath.Walk(contentBase, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -252,7 +251,7 @@ func main() {
 	}
 
 	var singleTemplate = defaultSingleTemplate
-	if tmpl, hasTmpl := templates["single"]; hasTmpl {
+	if tmpl, hasTmpl := templates[defaultPageTemplate]; hasTmpl {
 		singleTemplate = tmpl
 	}
 
