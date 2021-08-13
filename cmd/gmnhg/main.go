@@ -61,12 +61,18 @@
 // config option in config.toml:
 //
 //  ignoreFiles = [ "_index\\.gmi\\.md$" ]
+//
+// Limitations:
+//
+// * For now, the program will only recognize YAML front matter, while
+// Hugo supports it in TOML, YAML, JSON, and org-mode formats.
 package main
 
 import (
 	"bytes"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -96,6 +102,8 @@ var (
 	tmplNameRegex     = regexp.MustCompile(templateBase + `([\w-_ /]+)\.gotmpl`)
 	topLevelPostRegex = regexp.MustCompile(contentBase + `([\w-_ ]+)/([\w-_ ]+)\.md`)
 )
+
+var hugoConfigFiles = []string{"config.toml", "config.yaml", "config.json"}
 
 type post struct {
 	Post     []byte
@@ -165,8 +173,15 @@ func main() {
 		}
 	}
 
-	if fileInfo, err := os.Stat("config.toml"); os.IsNotExist(err) || fileInfo.IsDir() {
-		panic("config.toml either doesn't exist or is a directory; not in a Hugo site dir?")
+	configFound := false
+	for _, filename := range hugoConfigFiles {
+		if fileInfo, err := os.Stat(filename); !(os.IsNotExist(err) || fileInfo.IsDir()) {
+			configFound = true
+			break
+		}
+	}
+	if !configFound {
+		panic(fmt.Errorf("no Hugo config in %v found; not in a Hugo site dir?", hugoConfigFiles))
 	}
 
 	// build templates
