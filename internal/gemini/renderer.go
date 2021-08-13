@@ -18,6 +18,7 @@
 package gemini
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"regexp"
@@ -32,6 +33,7 @@ var (
 	lineBreak          = []byte{'\n'}
 	space              = []byte{' '}
 	linkPrefix         = []byte("=> ")
+	quoteBrPrefix      = []byte("\n> ")
 	quotePrefix        = []byte("> ")
 	itemPrefix         = []byte("* ")
 	itemIndent         = []byte{'\t'}
@@ -89,8 +91,7 @@ func (r Renderer) blockquote(w io.Writer, node *ast.BlockQuote, entering bool) {
 		if node := node.AsContainer(); node != nil {
 			for _, child := range node.Children {
 				w.Write(quotePrefix)
-				// assume children would be paragraphs
-				r.text(w, child)
+				r.blockquoteText(w, child)
 				// double linebreak to ensure Gemini clients don't merge
 				// quotes; gomarkdown assumes separate blockquotes are
 				// paragraphs of the same blockquote while we don't
@@ -256,6 +257,21 @@ func (r Renderer) text(w io.Writer, node ast.Node) {
 	if node := node.AsContainer(); node != nil {
 		for _, child := range node.Children {
 			r.text(w, child)
+		}
+	}
+}
+
+// TODO: this really should've been unified with text(), but having two
+// extra params for prefix/line breaks is not neat
+func (r Renderer) blockquoteText(w io.Writer, node ast.Node) {
+	if node := node.AsLeaf(); node != nil {
+		// pad every line break with blockquote symbol
+		w.Write([]byte(bytes.ReplaceAll(node.Literal, lineBreak, quoteBrPrefix)))
+		return
+	}
+	if node := node.AsContainer(); node != nil {
+		for _, child := range node.Children {
+			r.blockquoteText(w, child)
 		}
 	}
 }
