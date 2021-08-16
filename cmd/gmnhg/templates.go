@@ -16,6 +16,7 @@
 package main
 
 import (
+	"github.com/Masterminds/sprig/v3"
 	"sort"
 	"text/template"
 )
@@ -37,12 +38,13 @@ func (p postsSort) Swap(i, j int) {
 }
 
 func mustParseTmpl(name, value string) *template.Template {
-	return template.Must(template.New(name).Funcs(funcMap).Parse(value))
+	return template.Must(template.New(name).Funcs(defineFuncMap()).Parse(value))
 }
 
-var funcMap template.FuncMap = template.FuncMap{
+func defineFuncMap() template.FuncMap {
+	fm := sprig.TxtFuncMap()	
 	// sorts posts by date, newest posts go first
-	"sortPosts": func(posts []*post) []*post {
+	fm["sortPosts"] = func(posts []*post) []*post {
 		// sortPosts is most likely to be used in a pipeline, and the
 		// user has every right to expect it doesn't modify their
 		// existing posts slice
@@ -50,7 +52,8 @@ var funcMap template.FuncMap = template.FuncMap{
 		copy(ps, posts)
 		sort.Sort(ps)
 		return ps
-	},
+	}
+	return fm
 }
 
 var defaultSingleTemplate = mustParseTmpl("single", `# {{ .Metadata.PostTitle }}

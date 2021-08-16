@@ -203,7 +203,7 @@ func main() {
 			if err != nil {
 				return err
 			}
-			tmpl, err := template.New(tmplName).Funcs(funcMap).Parse(string(contents))
+			tmpl, err := template.New(tmplName).Funcs(defineFuncMap()).Parse(string(contents))
 			if err != nil {
 				return err
 			}
