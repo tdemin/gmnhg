@@ -16,7 +16,7 @@
 package main
 
 import (
-	"github.com/Masterminds/sprig"
+	"github.com/Masterminds/sprig/v3"
 	"sort"
 	"text/template"
 )
