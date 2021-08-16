@@ -56,8 +56,6 @@ func defineFuncMap() template.FuncMap {
 	return fm
 }
 
-var funcMap template.FuncMap = defineFuncMap()
-
 var defaultSingleTemplate = mustParseTmpl("single", `# {{ .Metadata.PostTitle }}
 
 {{ .Metadata.PostDate.Format "2006-01-02 15:04" }}
