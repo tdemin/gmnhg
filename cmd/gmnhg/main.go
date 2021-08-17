@@ -24,9 +24,7 @@
 // 1. If the .md file specifies its own layout, the relevant layout file
 // is applied. If not, the default template is applied (single). If the
 // layout file does not exist, the file is skipped. Draft posts are not
-// rendered. _index.md files are also skipped. Markdown resources under
-// a leaf bundle (any directory containing an index.* file) will not be
-// rendered, with the exception of the leaf's primary index.md page.
+// rendered. _index.md files are also skipped.
 //
 // 2. For every top-level content directory an index.gmi is generated,
 // the corresponding template is taken from top/{directory_name}.gotmpl.
@@ -57,7 +55,8 @@
 // rendered from directory's _index.gmi.md.
 //
 // Directory indices are passed all posts from subdirectories (branch
-// and leaf bundles). This allows for roll-up indices.
+// and leaf bundles), with the exception of leaf resource pages.
+// This allows for roll-up indices.
 //
 // 3. The top-level index.gmi is passed with the .PostData map whose
 // keys are top-level content directories names and values are slices
@@ -263,10 +262,6 @@ func main() {
 		if n := info.Name(); info.IsDir() || !strings.HasSuffix(n, ".md") || n == "_index.md" || n == indexMdFilename {
 			return nil
 		}
-		// do not render resources under leaf paths unless they are an index
-		if info.Name() != "index.md" && hasSubPath(leafIndexPaths, path) {
-			return nil
-		}
 		fileContent, err := ioutil.ReadFile(path)
 		if err != nil {
 			return err
@@ -287,18 +282,19 @@ func main() {
 		posts[key] = &p
 		if matches := pagePathRegex.FindStringSubmatch(path); matches != nil {
 			dirs := strings.Split(matches[1], "/")
-			// if this is a leaf node, the dir is the name of the post
-			if info.Name() == "index.md" {
-				dirs = dirs[:len(dirs)-1]
-			}
-			// include post in all subdirectory indices
-			for i, dir := range dirs {
-				if i > 0 {
-					dirs[i] = dirs[i - 1] + "/" + dir
+			// only include leaf resources pages in leaf index
+			if info.Name() != "index.md" && hasSubPath(leafIndexPaths, path) {
+				topLevelPosts[matches[1]] = append(topLevelPosts[matches[1]])
+			} else {
+				// include normal pages in all subdirectory indices
+				for i, dir := range dirs {
+					if i > 0 {
+						dirs[i] = dirs[i - 1] + "/" + dir
+					}
 				}
-			}
-			for _, dir := range dirs {
-				topLevelPosts[dir] = append(topLevelPosts[dir], &p)
+				for _, dir := range dirs {
+					topLevelPosts[dir] = append(topLevelPosts[dir], &p)
+				}
 			}
 		}
 		return nil
