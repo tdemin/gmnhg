@@ -385,6 +385,18 @@ func main() {
 		panic(err)
 	}
 
+	// copy page resources to output dir
+	if err := filepath.Walk(contentBase, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || strings.HasSuffix(info.Name(), ".md") {
+			return nil
+		}
+		return copyFile(path.Join(outputDir, strings.TrimPrefix(p, contentBase)), p)
+	}); err != nil {
+		panic(err)
+	}
 	// copy static files to output dir unmodified
 	if err := filepath.Walk(staticBase, func(p string, info os.FileInfo, err error) error {
 		if os.IsNotExist(err) {
