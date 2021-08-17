@@ -110,9 +110,9 @@ const (
 )
 
 var (
-	tmplNameRegex    = regexp.MustCompile("^" + templateBase + `([\w-_ /]+)\.gotmpl$`)
-	leafIndexRegex   = regexp.MustCompile("^" + contentBase + `([\w-_ /]+)/index\.[\w]+$`)
-	pagePathRegex    = regexp.MustCompile("^" + contentBase + `([\w-_ /]+)/([\w-_ ]+)\.md$`)
+	tmplNameRegex  = regexp.MustCompile("^" + templateBase + `([\w-_ /]+)\.gotmpl$`)
+	leafIndexRegex = regexp.MustCompile("^" + contentBase + `([\w-_ /]+)/index\.[\w]+$`)
+	pagePathRegex  = regexp.MustCompile("^" + contentBase + `([\w-_ /]+)/([\w-_ ]+)\.md$`)
 )
 
 var hugoConfigFiles = []string{"config.toml", "config.yaml", "config.json"}
@@ -163,12 +163,12 @@ func writeFile(dst string, contents []byte) error {
 }
 
 func hasSubPath(paths []string, path string) bool {
-  for _, p := range paths {
-		if strings.HasPrefix(path, p + "/") {
+	for _, p := range paths {
+		if strings.HasPrefix(path, p+"/") {
 			return true
 		}
-  }
-  return false
+	}
+	return false
 }
 
 var version = "v0+HEAD"
@@ -245,7 +245,7 @@ func main() {
 			return nil
 		}
 		if matches := leafIndexRegex.FindStringSubmatch(path); matches != nil {
-			leafIndexPaths = append(leafIndexPaths, contentBase + matches[1])
+			leafIndexPaths = append(leafIndexPaths, contentBase+matches[1])
 		}
 		return nil
 	}); err != nil {
@@ -289,7 +289,7 @@ func main() {
 				// include normal pages in all subdirectory indices
 				for i, dir := range dirs {
 					if i > 0 {
-						dirs[i] = dirs[i - 1] + "/" + dir
+						dirs[i] = dirs[i-1] + "/" + dir
 					}
 				}
 				for _, dir := range dirs {
