@@ -65,7 +65,7 @@
 // rendered from top-level _index.gmi.md.
 //
 // This program provides some extra template functions, documented in
-// templates.go. The program also includes functions from sprig
+// templates.go. Template functions from sprig are also available
 // (https://github.com/Masterminds/sprig); see the sprig documentation
 // for more details.
 //
