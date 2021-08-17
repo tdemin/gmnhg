@@ -254,7 +254,6 @@ func main() {
 	// render posts to Gemtext and collect top level posts data
 	posts := make(map[string]*post)
 	topLevelPosts := make(map[string][]*post)
-	allPosts := make(map[string][]*post)
 	if err := filepath.Walk(contentBase, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -299,7 +298,6 @@ func main() {
 			for _, dir := range dirs {
 				topLevelPosts[dir] = append(topLevelPosts[dir], &p)
 			}
-			allPosts[matches[1]] = append(allPosts[matches[1]], &p)
 		}
 		return nil
 	}); err != nil {
@@ -389,7 +387,7 @@ func main() {
 		panic(err)
 	}
 	buf := bytes.Buffer{}
-	cnt := map[string]interface{}{"PostData": allPosts, "Content": gemtext}
+	cnt := map[string]interface{}{"PostData": topLevelPosts, "Content": gemtext}
 	if err := indexTmpl.Execute(&buf, cnt); err != nil {
 		panic(err)
 	}
