@@ -31,11 +31,16 @@
 // Its content is taken from _index.gmi.md in that dir. If there's no
 // matching template or no _index.gmi.md, the index won't be rendered.
 //
+// Templates for subdirectories are placed in subfolders under top/.
+// For example, a template for an index at series/first/_index.gmi.md
+// should be placed at top/series/first.gotmpl.
+//
 // 3. The very top index.gmi is generated from index.gotmpl and
 // top-level _index.gmi.
 //
 // The program will then copy static files from static/ directory to the
-// output dir.
+// output dir. Page resources (non-Markdown files) will also be copied
+// from the content/ directory as-is, without further modification.
 //
 // Templates are passed the following data:
 //
@@ -49,13 +54,19 @@
 // directory name relative to content dir, and .Content, which is
 // rendered from directory's _index.gmi.md.
 //
+// Directory indices are passed all posts from subdirectories (branch
+// and leaf bundles), with the exception of leaf resource pages.
+// This allows for roll-up indices.
+//
 // 3. The top-level index.gmi is passed with the .PostData map whose
 // keys are top-level content directories names and values are slices
 // over the same post props as specified in 1, and .Content, which is
 // rendered from top-level _index.gmi.md.
 //
 // This program provides some extra template functions, documented in
-// templates.go.
+// templates.go. Template functions from sprig are also available
+// (https://github.com/Masterminds/sprig); see the sprig documentation
+// for more details.
 //
 // One might want to ignore _index.gmi.md files with the following Hugo
 // config option in config.toml:
@@ -99,8 +110,9 @@ const (
 )
 
 var (
-	tmplNameRegex     = regexp.MustCompile(templateBase + `([\w-_ /]+)\.gotmpl`)
-	topLevelPostRegex = regexp.MustCompile(contentBase + `([\w-_ ]+)/([\w-_ ]+)\.md`)
+	tmplNameRegex    = regexp.MustCompile("^" + templateBase + `([\w-_ /]+)\.gotmpl$`)
+	leafIndexRegex   = regexp.MustCompile("^" + contentBase + `([\w-_ /]+)/index\.[\w]+$`)
+	pagePathRegex    = regexp.MustCompile("^" + contentBase + `([\w-_ /]+)/([\w-_ ]+)\.md$`)
 )
 
 var hugoConfigFiles = []string{"config.toml", "config.yaml", "config.json"}
@@ -148,6 +160,15 @@ func writeFile(dst string, contents []byte) error {
 		return err
 	}
 	return nil
+}
+
+func hasSubPath(paths []string, path string) bool {
+  for _, p := range paths {
+		if strings.HasPrefix(path, p + "/") {
+			return true
+		}
+  }
+  return false
 }
 
 var version = "v0+HEAD"
@@ -214,6 +235,23 @@ func main() {
 		}
 	}
 
+	// collect leaf node paths (directories containing an index.* file)
+	leafIndexPaths := []string{}
+	if err := filepath.Walk(contentBase, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if matches := leafIndexRegex.FindStringSubmatch(path); matches != nil {
+			leafIndexPaths = append(leafIndexPaths, contentBase + matches[1])
+		}
+		return nil
+	}); err != nil {
+		panic(err)
+	}
+
 	// render posts to Gemtext and collect top level posts data
 	posts := make(map[string]*post)
 	topLevelPosts := make(map[string][]*post)
@@ -242,8 +280,22 @@ func main() {
 			Metadata: metadata,
 		}
 		posts[key] = &p
-		if matches := topLevelPostRegex.FindStringSubmatch(path); matches != nil {
-			topLevelPosts[matches[1]] = append(topLevelPosts[matches[1]], &p)
+		if matches := pagePathRegex.FindStringSubmatch(path); matches != nil {
+			dirs := strings.Split(matches[1], "/")
+			// only include leaf resources pages in leaf index
+			if info.Name() != "index.md" && hasSubPath(leafIndexPaths, path) {
+				topLevelPosts[matches[1]] = append(topLevelPosts[matches[1]], &p)
+			} else {
+				// include normal pages in all subdirectory indices
+				for i, dir := range dirs {
+					if i > 0 {
+						dirs[i] = dirs[i - 1] + "/" + dir
+					}
+				}
+				for _, dir := range dirs {
+					topLevelPosts[dir] = append(topLevelPosts[dir], &p)
+				}
+			}
 		}
 		return nil
 	}); err != nil {
@@ -341,6 +393,18 @@ func main() {
 		panic(err)
 	}
 
+	// copy page resources to output dir
+	if err := filepath.Walk(contentBase, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || strings.HasSuffix(info.Name(), ".md") {
+			return nil
+		}
+		return copyFile(path.Join(outputDir, strings.TrimPrefix(p, contentBase)), p)
+	}); err != nil {
+		panic(err)
+	}
 	// copy static files to output dir unmodified
 	if err := filepath.Walk(staticBase, func(p string, info os.FileInfo, err error) error {
 		if os.IsNotExist(err) {
