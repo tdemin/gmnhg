@@ -79,6 +79,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -99,8 +100,10 @@ const (
 )
 
 var (
-	tmplNameRegex     = regexp.MustCompile(templateBase + `([\w-_ /]+)\.gotmpl`)
-	topLevelPostRegex = regexp.MustCompile(contentBase + `([\w-_ ]+)/([\w-_ ]+)\.md`)
+	tmplNameRegex    = regexp.MustCompile("^" + templateBase + `([\w-_ /]+)\.gotmpl$`)
+	branchIndexRegex = regexp.MustCompile("^" + contentBase + `([\w-_ /]+)/` + indexMdFilename + "$")
+	leafIndexRegex   = regexp.MustCompile("^" + contentBase + `([\w-_ /]+)/index\.[\w]+$`)
+	pagePathRegex    = regexp.MustCompile("^" + contentBase + `([\w-_ /]+)/([\w-_ ]+)\.md$`)
 )
 
 var hugoConfigFiles = []string{"config.toml", "config.yaml", "config.json"}
@@ -148,6 +151,15 @@ func writeFile(dst string, contents []byte) error {
 		return err
 	}
 	return nil
+}
+
+func hasSubPath(paths []string, path string) bool {
+  for _, p := range paths {
+		if strings.HasPrefix(path, p + "/") {
+			return true
+		}
+  }
+  return false
 }
 
 var version = "v0+HEAD"
@@ -213,15 +225,45 @@ func main() {
 			panic(err)
 		}
 	}
+	// sort paths by length to ensure longer paths match first
+	templatePaths := []string{}
+	for p, _ := range templates {
+		templatePaths = append(templatePaths, p)
+	}
+	sort.Slice(templatePaths, func(i, j int) bool {
+		return len(templatePaths[i]) > len(templatePaths[j])
+	})
+
+	// collect leaf node paths (directories containing an index.* file)
+	leafIndexPaths := []string{}
+	if err := filepath.Walk(contentBase, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if matches := leafIndexRegex.FindStringSubmatch(path); matches != nil {
+			leafIndexPaths = append(leafIndexPaths, contentBase + matches[1])
+		}
+		return nil
+	}); err != nil {
+		panic(err)
+	}
 
 	// render posts to Gemtext and collect top level posts data
 	posts := make(map[string]*post)
 	topLevelPosts := make(map[string][]*post)
+	allPosts := make(map[string][]*post)
 	if err := filepath.Walk(contentBase, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if n := info.Name(); info.IsDir() || !strings.HasSuffix(n, ".md") || n == "_index.md" || n == indexMdFilename {
+			return nil
+		}
+		// do not render resources under leaf paths unless they are an index
+		if info.Name() != "index.md" && hasSubPath(leafIndexPaths, path) {
 			return nil
 		}
 		fileContent, err := ioutil.ReadFile(path)
@@ -242,8 +284,22 @@ func main() {
 			Metadata: metadata,
 		}
 		posts[key] = &p
-		if matches := topLevelPostRegex.FindStringSubmatch(path); matches != nil {
-			topLevelPosts[matches[1]] = append(topLevelPosts[matches[1]], &p)
+		if matches := pagePathRegex.FindStringSubmatch(path); matches != nil {
+			dirs := strings.Split(matches[1], "/")
+			// if this is a leaf node, the dir is the name of the post
+			if info.Name() == "index.md" {
+				dirs = dirs[:len(dirs)-1]
+			}
+			// include post in all subdirectory indices
+			for i, dir := range dirs {
+				if i > 0 {
+					dirs[i] = dirs[i - 1] + "/" + dir
+				}
+			}
+			for _, dir := range dirs {
+				topLevelPosts[dir] = append(topLevelPosts[dir], &p)
+			}
+			allPosts[matches[1]] = append(allPosts[matches[1]], &p)
 		}
 		return nil
 	}); err != nil {
@@ -333,7 +389,7 @@ func main() {
 		panic(err)
 	}
 	buf := bytes.Buffer{}
-	cnt := map[string]interface{}{"PostData": topLevelPosts, "Content": gemtext}
+	cnt := map[string]interface{}{"PostData": allPosts, "Content": gemtext}
 	if err := indexTmpl.Execute(&buf, cnt); err != nil {
 		panic(err)
 	}
