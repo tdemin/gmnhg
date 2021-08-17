@@ -284,7 +284,7 @@ func main() {
 			dirs := strings.Split(matches[1], "/")
 			// only include leaf resources pages in leaf index
 			if info.Name() != "index.md" && hasSubPath(leafIndexPaths, path) {
-				topLevelPosts[matches[1]] = append(topLevelPosts[matches[1]])
+				topLevelPosts[matches[1]] = append(topLevelPosts[matches[1]], &p)
 			} else {
 				// include normal pages in all subdirectory indices
 				for i, dir := range dirs {
