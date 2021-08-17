@@ -79,7 +79,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"text/template"
 
@@ -101,7 +100,6 @@ const (
 
 var (
 	tmplNameRegex    = regexp.MustCompile("^" + templateBase + `([\w-_ /]+)\.gotmpl$`)
-	branchIndexRegex = regexp.MustCompile("^" + contentBase + `([\w-_ /]+)/` + indexMdFilename + "$")
 	leafIndexRegex   = regexp.MustCompile("^" + contentBase + `([\w-_ /]+)/index\.[\w]+$`)
 	pagePathRegex    = regexp.MustCompile("^" + contentBase + `([\w-_ /]+)/([\w-_ ]+)\.md$`)
 )
@@ -225,14 +223,6 @@ func main() {
 			panic(err)
 		}
 	}
-	// sort paths by length to ensure longer paths match first
-	templatePaths := []string{}
-	for p, _ := range templates {
-		templatePaths = append(templatePaths, p)
-	}
-	sort.Slice(templatePaths, func(i, j int) bool {
-		return len(templatePaths[i]) > len(templatePaths[j])
-	})
 
 	// collect leaf node paths (directories containing an index.* file)
 	leafIndexPaths := []string{}
