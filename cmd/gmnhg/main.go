@@ -24,18 +24,25 @@
 // 1. If the .md file specifies its own layout, the relevant layout file
 // is applied. If not, the default template is applied (single). If the
 // layout file does not exist, the file is skipped. Draft posts are not
-// rendered. _index.md files are also skipped.
+// rendered. _index.md files are also skipped. Markdown resources under
+// a leaf bundle (any directory containing an index.* file) will not be
+// rendered, with the exception of the leaf's primary index.md page.
 //
 // 2. For every top-level content directory an index.gmi is generated,
 // the corresponding template is taken from top/{directory_name}.gotmpl.
 // Its content is taken from _index.gmi.md in that dir. If there's no
 // matching template or no _index.gmi.md, the index won't be rendered.
 //
+// Templates for subdirectories are placed in subfolders under top/.
+// For example, a template for an index at series/first/_index.gmi.md
+// should be placed at top/series/first.gotmpl.
+//
 // 3. The very top index.gmi is generated from index.gotmpl and
 // top-level _index.gmi.
 //
 // The program will then copy static files from static/ directory to the
-// output dir.
+// output dir. Page resources (non-Markdown files) will also be copied
+// from the content/ directory as-is, without further modification.
 //
 // Templates are passed the following data:
 //
@@ -49,13 +56,18 @@
 // directory name relative to content dir, and .Content, which is
 // rendered from directory's _index.gmi.md.
 //
+// Directory indices are passed all posts from subdirectories (branch
+// and leaf bundles). This allows for roll-up indices.
+//
 // 3. The top-level index.gmi is passed with the .PostData map whose
 // keys are top-level content directories names and values are slices
 // over the same post props as specified in 1, and .Content, which is
 // rendered from top-level _index.gmi.md.
 //
 // This program provides some extra template functions, documented in
-// templates.go.
+// templates.go. The program also includes functions from sprig
+// (https://github.com/Masterminds/sprig); see the sprig documentation
+// for more details.
 //
 // One might want to ignore _index.gmi.md files with the following Hugo
 // config option in config.toml:
