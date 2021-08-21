@@ -37,7 +37,7 @@ var (
 	quotePrefix        = []byte("> ")
 	itemPrefix         = []byte("* ")
 	itemIndent         = []byte{'\t'}
-	preformattedToggle = []byte("```\n")
+	preformattedToggle = []byte("```")
 )
 
 var meaningfulCharsRegex = regexp.MustCompile(`\A[\s]+\z`)
@@ -206,8 +206,13 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 
 func (r Renderer) code(w io.Writer, node *ast.CodeBlock) {
 	w.Write(preformattedToggle)
+	if node.IsFenced {
+		w.Write(node.Info)
+	}
+	w.Write(lineBreak)
 	w.Write(node.Literal)
 	w.Write(preformattedToggle)
+	w.Write(lineBreak)
 }
 
 func (r Renderer) list(w io.Writer, node *ast.List, level int) {
@@ -325,6 +330,7 @@ func (r Renderer) tableBody(t *tablewriter.Table, node *ast.TableBody) {
 func (r Renderer) table(w io.Writer, node *ast.Table, entering bool) {
 	if entering {
 		w.Write(preformattedToggle)
+		w.Write(lineBreak)
 		// gomarkdown appears to only parse headings consisting of a
 		// single line and always have a TableBody preceded by a single
 		// TableHeader but we're better off not relying on it
@@ -343,6 +349,7 @@ func (r Renderer) table(w io.Writer, node *ast.Table, entering bool) {
 		t.Render()
 	} else {
 		w.Write(preformattedToggle)
+		w.Write(lineBreak)
 	}
 }
 
