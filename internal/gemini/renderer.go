@@ -38,6 +38,10 @@ var (
 	itemPrefix         = []byte("* ")
 	itemIndent         = []byte{'\t'}
 	preformattedToggle = []byte("```")
+	codeDelimiter      = []byte("`")
+	emphDelimiter      = []byte("*")
+	strongDelimiter    = []byte("**")
+	delDelimiter       = []byte("~~")
 )
 
 var meaningfulCharsRegex = regexp.MustCompile(`\A[\s]+\z`)
@@ -64,6 +68,21 @@ func NewRenderer() Renderer {
 // metadata.
 func NewRendererWithMetadata(m Metadata) Renderer {
 	return Renderer{Metadata: m}
+}
+
+func getNodeDelimiter(node ast.Node) []byte {
+	switch node.(type) {
+	case *ast.Code:
+		return codeDelimiter
+	case *ast.Emph:
+		return emphDelimiter
+	case *ast.Strong:
+		return strongDelimiter
+	case *ast.Del:
+		return delDelimiter
+	default:
+		return []byte{}
+	}
 }
 
 func (r Renderer) link(w io.Writer, node *ast.Link, entering bool) {
@@ -253,42 +272,53 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 }
 
 func (r Renderer) text(w io.Writer, node ast.Node) {
+	delimiter := getNodeDelimiter(node)
 	if node := node.AsLeaf(); node != nil {
 		// replace all newlines in text with spaces, allowing for soft
 		// wrapping; this is recommended as per Gemini spec p. 5.4.1
+		w.Write(delimiter)
 		w.Write([]byte(strings.ReplaceAll(string(node.Literal), "\n", " ")))
+		w.Write(delimiter)
 		return
 	}
 	if node := node.AsContainer(); node != nil {
+		w.Write(delimiter)
 		for _, child := range node.Children {
 			r.text(w, child)
 		}
+		w.Write(delimiter)
 	}
 }
 
 // TODO: this really should've been unified with text(), but having two
 // extra params for prefix/line breaks is not neat
 func (r Renderer) blockquoteText(w io.Writer, node ast.Node) {
+	delimiter := getNodeDelimiter(node)
 	if node := node.AsLeaf(); node != nil {
 		// pad every line break with blockquote symbol
+		w.Write(delimiter)
 		w.Write([]byte(bytes.ReplaceAll(node.Literal, lineBreak, quoteBrPrefix)))
+		w.Write(delimiter)
 		return
 	}
 	if node := node.AsContainer(); node != nil {
+		w.Write(delimiter)
 		for _, child := range node.Children {
 			r.blockquoteText(w, child)
 		}
+		w.Write(delimiter)
 	}
 }
 
 func extractText(node ast.Node) string {
+	delimiter := getNodeDelimiter(node)
 	if node := node.AsLeaf(); node != nil {
-		return strings.ReplaceAll(string(node.Literal), "\n", " ")
+		return string(delimiter) + strings.ReplaceAll(string(node.Literal), "\n", " ") + string(delimiter)
 	}
 	if node := node.AsContainer(); node != nil {
 		b := strings.Builder{}
 		for _, child := range node.Children {
-			b.WriteString(extractText(child))
+			b.WriteString(string(delimiter) + extractText(child) + string(delimiter))
 		}
 		return b.String()
 	}
