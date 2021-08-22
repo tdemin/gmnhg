@@ -67,10 +67,10 @@ func (s Settings) Has(setting Settings) bool {
 
 const (
 	// Defaults simply renders the document.
-	Defaults Settings = 0b0
+	Defaults Settings = 0
 	// WithMetadata indicates that the metadata should be included in
 	// the text produced by the renderer.
-	WithMetadata Settings = 0b1
+	WithMetadata Settings = 1 << iota
 )
 
 // RenderMarkdown converts Markdown text to Gemtext using gomarkdown. It
