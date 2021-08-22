@@ -16,27 +16,11 @@
 package main
 
 import (
-	"sort"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/tdemin/gmnhg/internal/gmnhg"
 )
-
-type postsSort []*post
-
-func (p postsSort) Len() int {
-	return len(p)
-}
-
-func (p postsSort) Less(i, j int) bool {
-	return p[i].Metadata.PostDate.After(p[j].Metadata.PostDate)
-}
-
-func (p postsSort) Swap(i, j int) {
-	t := p[i]
-	p[i] = p[j]
-	p[j] = t
-}
 
 func mustParseTmpl(name, value string) *template.Template {
 	return template.Must(template.New(name).Funcs(defineFuncMap()).Parse(value))
@@ -45,15 +29,9 @@ func mustParseTmpl(name, value string) *template.Template {
 func defineFuncMap() template.FuncMap {
 	fm := sprig.TxtFuncMap()
 	// sorts posts by date, newest posts go first
-	fm["sortPosts"] = func(posts []*post) []*post {
-		// sortPosts is most likely to be used in a pipeline, and the
-		// user has every right to expect it doesn't modify their
-		// existing posts slice
-		ps := make(postsSort, len(posts))
-		copy(ps, posts)
-		sort.Sort(ps)
-		return ps
-	}
+	fm["sortPosts"] = gmnhg.SortRev
+	fm["sort"] = gmnhg.Sort
+	fm["sortRev"] = gmnhg.SortRev
 	return fm
 }
 

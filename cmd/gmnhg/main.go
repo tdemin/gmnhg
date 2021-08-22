@@ -63,8 +63,18 @@
 // over the same post props as specified in 1, and .Content, which is
 // rendered from top-level _index.gmi.md.
 //
-// This program provides some extra template functions, documented in
-// templates.go. Template functions from sprig are also available
+// This program provides some extra template functions on top of sort:
+//
+// * sort, which sorts slices of int, float64, strings, and anything
+// implementing sort.Interface (which includes slices of posts),
+// returning a new, sorted slice.
+//
+// * sortRev, which works like sort, but sorts in reverse order.
+//
+// * sortPosts, which is an alias to sortRev preserved for backwards
+// compatilibity.
+//
+// Template functions from sprig are also available
 // (https://github.com/Masterminds/sprig); see the sprig documentation
 // for more details.
 //
@@ -94,6 +104,7 @@ import (
 	"text/template"
 
 	gemini "github.com/tdemin/gmnhg"
+	"github.com/tdemin/gmnhg/internal/gmnhg"
 )
 
 const (
@@ -116,12 +127,6 @@ var (
 )
 
 var hugoConfigFiles = []string{"config.toml", "config.yaml", "config.json"}
-
-type post struct {
-	Post     []byte
-	Metadata gemini.HugoMetadata
-	Link     string
-}
 
 func copyFile(dst, src string) error {
 	input, err := os.Open(src)
@@ -253,8 +258,8 @@ func main() {
 	}
 
 	// render posts to Gemtext and collect top level posts data
-	posts := make(map[string]*post)
-	topLevelPosts := make(map[string][]*post)
+	posts := make(map[string]gmnhg.Post)
+	topLevelPosts := make(map[string]gmnhg.Posts)
 	if err := filepath.Walk(contentBase, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -274,17 +279,17 @@ func main() {
 			return err
 		}
 		key := strings.TrimPrefix(strings.TrimSuffix(path, ".md"), contentBase) + ".gmi"
-		p := post{
+		p := gmnhg.Post{
 			Post:     gemText,
 			Link:     key,
 			Metadata: metadata,
 		}
-		posts[key] = &p
+		posts[key] = p
 		if matches := pagePathRegex.FindStringSubmatch(path); matches != nil {
 			dirs := strings.Split(matches[1], "/")
 			// only include leaf resources pages in leaf index
 			if info.Name() != "index.md" && hasSubPath(leafIndexPaths, path) {
-				topLevelPosts[matches[1]] = append(topLevelPosts[matches[1]], &p)
+				topLevelPosts[matches[1]] = append(topLevelPosts[matches[1]], p)
 			} else {
 				// include normal pages in all subdirectory indices
 				for i, dir := range dirs {
@@ -293,7 +298,7 @@ func main() {
 					}
 				}
 				for _, dir := range dirs {
-					topLevelPosts[dir] = append(topLevelPosts[dir], &p)
+					topLevelPosts[dir] = append(topLevelPosts[dir], p)
 				}
 			}
 		}
