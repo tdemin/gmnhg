@@ -16,9 +16,10 @@
 package main
 
 import (
-	"github.com/Masterminds/sprig/v3"
 	"sort"
 	"text/template"
+
+	"github.com/Masterminds/sprig/v3"
 )
 
 type postsSort []*post
@@ -42,7 +43,7 @@ func mustParseTmpl(name, value string) *template.Template {
 }
 
 func defineFuncMap() template.FuncMap {
-	fm := sprig.TxtFuncMap()	
+	fm := sprig.TxtFuncMap()
 	// sorts posts by date, newest posts go first
 	fm["sortPosts"] = func(posts []*post) []*post {
 		// sortPosts is most likely to be used in a pipeline, and the
