@@ -101,7 +101,7 @@ func RenderMarkdown(md []byte, settings Settings) (geminiText []byte, metadata H
 	}
 	md = md[blockEnd+len(yamlDelimiter)*2:]
 parse:
-	ast := markdown.Parse(md, parser.NewWithExtensions(parser.CommonExtensions))
+	ast := markdown.Parse(md, parser.NewWithExtensions(parser.CommonExtensions|parser.NoEmptyLineBeforeBlock))
 	var content []byte
 	if settings.Has(WithMetadata) && metadata.PostTitle != "" {
 		content = markdown.Render(ast, gemini.NewRendererWithMetadata(metadata))
