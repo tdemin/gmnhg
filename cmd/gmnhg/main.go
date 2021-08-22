@@ -15,7 +15,7 @@
 
 // gmnhg converts Hugo content files to a Gemini site. This program is
 // to be started in the top level directory of a Hugo site (the one
-// containing config.toml).
+// containing config.toml, config.json, or config.yaml).
 //
 // gmngh will read layout template files (with .gotmpl extension) and
 // then apply them to content files ending with .md by the following
@@ -31,9 +31,9 @@
 // Its content is taken from _index.gmi.md in that dir. If there's no
 // matching template or no _index.gmi.md, the index won't be rendered.
 //
-// Templates for subdirectories are placed in subfolders under top/.
-// For example, a template for an index at series/first/_index.gmi.md
-// should be placed at top/series/first.gotmpl.
+// Templates for subdirectories are placed in subfolders under top/. For
+// example, a template for an index at series/first/_index.gmi.md should
+// be placed at top/series/first.gotmpl.
 //
 // 3. The very top index.gmi is generated from index.gotmpl and
 // top-level _index.gmi.
@@ -55,8 +55,8 @@
 // rendered from directory's _index.gmi.md.
 //
 // Directory indices are passed all posts from subdirectories (branch
-// and leaf bundles), with the exception of leaf resource pages.
-// This allows for roll-up indices.
+// and leaf bundles), with the exception of leaf resource pages. This
+// allows for roll-up indices.
 //
 // 3. The top-level index.gmi is passed with the .PostData map whose
 // keys are top-level content directories names and values are slices
