@@ -126,20 +126,6 @@ func (r Renderer) blockquote(w io.Writer, node *ast.BlockQuote, entering bool) {
 	}
 }
 
-func (r Renderer) callout(w io.Writer, node *ast.Callout, entering bool) {
-	// Same as blockquote for now (callouts are blockquotes that begin with an emoji)
-	if entering {
-		if node := node.AsContainer(); node != nil {
-			for _, child := range node.Children {
-				w.Write(quotePrefix)
-				r.blockquoteText(w, child)
-				w.Write(lineBreak)
-				w.Write(lineBreak)
-			}
-		}
-	}
-}
-
 func (r Renderer) hr(w io.Writer, node *ast.HorizontalRule, entering bool) {
 	if entering {
 		w.Write(horizontalRule)
@@ -446,8 +432,6 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	switch node := node.(type) {
 	case *ast.BlockQuote:
 		r.blockquote(w, node, entering)
-	case *ast.Callout:
-		r.callout(w, node, entering)
 	case *ast.HorizontalRule:
 		r.hr(w, node, entering)
 	case *ast.Heading:
@@ -456,9 +440,8 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	case *ast.Paragraph:
 		// blockquote wraps paragraphs which makes for an extra render
 		_, parentIsBlockQuote := node.Parent.(*ast.BlockQuote)
-		_, parentIsCallout := node.Parent.(*ast.Callout)
 		_, parentIsListItem := node.Parent.(*ast.ListItem)
-		if !parentIsBlockQuote && !parentIsCallout && !parentIsListItem {
+		if !parentIsBlockQuote && !parentIsListItem {
 			noNewLine = r.paragraph(w, node, entering)
 		}
 	case *ast.CodeBlock:
