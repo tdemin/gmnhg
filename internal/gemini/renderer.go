@@ -242,10 +242,6 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 			panic("rendering anything but list items is not supported")
 		}
 		isDefinition := ((item.ListFlags & ast.ListItemBeginningOfList) != 0) && isDefinitionList
-		// this assumes github.com/gomarkdown/markdown can only produce
-		// list items that contain a child paragraph and possibly
-		// another list; this might not be true but I can hardly imagine
-		// a list item that contains anything else
 		if l := len(item.Children); l >= 1 {
 			for i := 0; i < level; i++ {
 				w.Write(itemIndent)
@@ -255,10 +251,7 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 			} else if !isDefinition {
 				w.Write(itemPrefix)
 			}
-			para, ok := item.Children[0].(*ast.Paragraph)
-			if ok {
-				r.text(w, para)
-			}
+			r.text(w, item)
 			w.Write(lineBreak)
 			if l >= 2 {
 				if list, ok := item.Children[1].(*ast.List); ok {
@@ -381,6 +374,10 @@ func (r Renderer) table(w io.Writer, node *ast.Table, entering bool) {
 	}
 }
 
+func (r Renderer) footnotes(w io.Writer, node *ast.Footnotes, entering bool) {
+	// does nothing yet
+}
+
 // RenderNode implements Renderer.RenderNode().
 func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.WalkStatus {
 	// despite most of the subroutines here accepting entering, most of
@@ -393,9 +390,9 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		r.heading(w, node, entering)
 		noNewLine = false
 	case *ast.Paragraph:
-		// blockquote wraps paragraphs which makes for an extra render
 		switch node.Parent.(type) {
-		case *ast.BlockQuote, *ast.ListItem:
+		// these (should) handle underlying paragraphs themselves
+		case *ast.BlockQuote, *ast.ListItem, *ast.Footnotes:
 		default:
 			noNewLine = r.paragraph(w, node, entering)
 		}
@@ -413,6 +410,8 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	case *ast.Table:
 		r.table(w, node, entering)
 		noNewLine = false
+	case *ast.Footnotes:
+		r.footnotes(w, node, entering)
 	}
 	if !noNewLine && !entering {
 		w.Write(lineBreak)
