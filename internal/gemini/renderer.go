@@ -234,12 +234,14 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 	// the text/gemini spec included with the current Gemini spec does
 	// not specify anything about the formatting of lists of level >= 2,
 	// as of now this will just render them like in Markdown
-	isNumbered := (node.ListFlags & ast.ListTypeOrdered) == ast.ListTypeOrdered
+	isNumbered := (node.ListFlags & ast.ListTypeOrdered) != 0
+	isDefinitionList := (node.ListFlags & ast.ListTypeDefinition) != 0
 	for number, item := range node.Children {
 		item, ok := item.(*ast.ListItem)
 		if !ok {
 			panic("rendering anything but list items is not supported")
 		}
+		isDefinition := ((item.ListFlags & ast.ListItemBeginningOfList) != 0) && isDefinitionList
 		// this assumes github.com/gomarkdown/markdown can only produce
 		// list items that contain a child paragraph and possibly
 		// another list; this might not be true but I can hardly imagine
@@ -250,7 +252,7 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 			}
 			if isNumbered {
 				w.Write([]byte(fmt.Sprintf("%d. ", number+1)))
-			} else {
+			} else if !isDefinition {
 				w.Write(itemPrefix)
 			}
 			para, ok := item.Children[0].(*ast.Paragraph)
