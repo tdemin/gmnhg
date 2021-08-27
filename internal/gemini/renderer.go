@@ -165,14 +165,10 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 		}
 		linksOnly := func() bool {
 			for _, child := range children {
-				// TODO: simplify
-				if _, ok := child.(*ast.Link); ok {
+				switch child := child.(type) {
+				case *ast.Link, *ast.Image:
 					continue
-				}
-				if _, ok := child.(*ast.Image); ok {
-					continue
-				}
-				if child, ok := child.(*ast.Text); ok {
+				case *ast.Text:
 					// any meaningful text?
 					if meaningfulCharsRegex.Find(child.Literal) == nil {
 						return false
@@ -210,11 +206,11 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 				w.Write(lineBreak)
 			}
 			for _, link := range linkStack {
-				if link, ok := link.(*ast.Link); ok {
+				switch link := link.(type) {
+				case *ast.Link:
 					r.link(w, link, true)
-				}
-				if image, ok := link.(*ast.Image); ok {
-					r.image(w, image, true)
+				case *ast.Image:
+					r.image(w, link, true)
 				}
 				w.Write(lineBreak)
 			}
@@ -238,7 +234,7 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 	// the text/gemini spec included with the current Gemini spec does
 	// not specify anything about the formatting of lists of level >= 2,
 	// as of now this will just render them like in Markdown
-	isNumbered := (node.ListFlags & ast.ListTypeOrdered) == ast.ListTypeOrdered
+	isNumbered := (node.ListFlags & ast.ListTypeOrdered) != 0
 	for number, item := range node.Children {
 		item, ok := item.(*ast.ListItem)
 		if !ok {
@@ -401,9 +397,9 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		noNewLine = false
 	case *ast.Paragraph:
 		// blockquote wraps paragraphs which makes for an extra render
-		_, parentIsBlockQuote := node.Parent.(*ast.BlockQuote)
-		_, parentIsListItem := node.Parent.(*ast.ListItem)
-		if !parentIsBlockQuote && !parentIsListItem {
+		switch node.Parent.(type) {
+		case *ast.BlockQuote, *ast.ListItem:
+		default:
 			noNewLine = r.paragraph(w, node, entering)
 		}
 	case *ast.CodeBlock:
