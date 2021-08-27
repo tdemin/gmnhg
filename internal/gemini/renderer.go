@@ -240,12 +240,12 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 		if !ok {
 			panic("rendering anything but list items is not supported")
 		}
+		isTerm := (item.ListFlags & ast.ListTypeTerm) == ast.ListTypeTerm
 		// this assumes github.com/gomarkdown/markdown can only produce
 		// list items that contain a child paragraph and possibly
 		// another list; this might not be true but I can hardly imagine
 		// a list item that contains anything else
 		if l := len(item.Children); l >= 1 {
-			isTerm := (item.ListFlags & ast.ListTypeTerm) == ast.ListTypeTerm
 			// add extra line break to split up definitions
 			if isTerm && number > 0 {
 				w.Write(lineBreak)
