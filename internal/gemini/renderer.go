@@ -249,12 +249,17 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 		// another list; this might not be true but I can hardly imagine
 		// a list item that contains anything else
 		if l := len(item.Children); l >= 1 {
+			isTerm := (item.ListFlags & ast.ListTypeTerm) == ast.ListTypeTerm
+			// add extra line break to split up definitions
+			if isTerm && number > 0 {
+				w.Write(lineBreak)
+			}
 			for i := 0; i < level; i++ {
 				w.Write(itemIndent)
 			}
 			if isNumbered {
 				w.Write([]byte(fmt.Sprintf("%d. ", number+1)))
-			} else {
+			} else if !isTerm {
 				w.Write(itemPrefix)
 			}
 			para, ok := item.Children[0].(*ast.Paragraph)
