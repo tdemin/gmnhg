@@ -42,6 +42,11 @@ var (
 	emphDelimiter      = []byte("*")
 	strongDelimiter    = []byte("**")
 	delDelimiter       = []byte("~~")
+	horizontalRule     = []byte("---")
+	subOpen            = []byte("_{")
+	subClose           = []byte("}")
+	supOpen            = []byte("^(")
+	supClose           = []byte(")")
 )
 
 var meaningfulCharsRegex = regexp.MustCompile(`\A[\s]+\z`)
@@ -117,6 +122,48 @@ func (r Renderer) blockquote(w io.Writer, node *ast.BlockQuote, entering bool) {
 				w.Write(lineBreak)
 				w.Write(lineBreak)
 			}
+		}
+	}
+}
+
+func (r Renderer) callout(w io.Writer, node *ast.Callout, entering bool) {
+	// Same as blockquote for now (callouts are blockquotes that begin with an emoji)
+	if entering {
+		if node := node.AsContainer(); node != nil {
+			for _, child := range node.Children {
+				w.Write(quotePrefix)
+				r.blockquoteText(w, child)
+				w.Write(lineBreak)
+				w.Write(lineBreak)
+			}
+		}
+	}
+}
+
+func (r Renderer) hr(w io.Writer, node *ast.HorizontalRule, entering bool) {
+	if entering {
+		w.Write(horizontalRule)
+		w.Write(lineBreak)
+		w.Write(lineBreak)
+	}
+}
+
+// Based on https://pages.uoregon.edu/ncp/Courses/MathInPlainTextEmail.html
+func (r Renderer) subscript(w io.Writer, node *ast.Subscript, entering bool) {
+	if entering {
+		if node := node.AsLeaf(); node != nil {
+			w.Write(subOpen)
+			w.Write([]byte(strings.ReplaceAll(string(node.Literal), "\n", " ")))
+			w.Write(subClose)
+		}
+	}
+}
+func (r Renderer) superscript(w io.Writer, node *ast.Superscript, entering bool) {
+	if entering {
+		if node := node.AsLeaf(); node != nil {
+			w.Write(supOpen)
+			w.Write([]byte(strings.ReplaceAll(string(node.Literal), "\n", " ")))
+			w.Write(supClose)
 		}
 	}
 }
@@ -198,6 +245,14 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 				// line breaks and spaces and such from rendering
 				if !linksOnly {
 					r.text(w, child)
+				}
+			case *ast.Subscript:
+				if !linksOnly {
+					r.subscript(w, child, true)
+				}
+			case *ast.Superscript:
+				if !linksOnly {
+					r.superscript(w, child, true)
 				}
 			}
 		}
@@ -391,14 +446,19 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	switch node := node.(type) {
 	case *ast.BlockQuote:
 		r.blockquote(w, node, entering)
+	case *ast.Callout:
+		r.callout(w, node, entering)
+	case *ast.HorizontalRule:
+		r.hr(w, node, entering)
 	case *ast.Heading:
 		r.heading(w, node, entering)
 		noNewLine = false
 	case *ast.Paragraph:
 		// blockquote wraps paragraphs which makes for an extra render
 		_, parentIsBlockQuote := node.Parent.(*ast.BlockQuote)
+		_, parentIsCallout := node.Parent.(*ast.Callout)
 		_, parentIsListItem := node.Parent.(*ast.ListItem)
-		if !parentIsBlockQuote && !parentIsListItem {
+		if !parentIsBlockQuote && !parentIsCallout && !parentIsListItem {
 			noNewLine = r.paragraph(w, node, entering)
 		}
 	case *ast.CodeBlock:
