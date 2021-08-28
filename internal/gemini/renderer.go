@@ -235,24 +235,27 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 	// not specify anything about the formatting of lists of level >= 2,
 	// as of now this will just render them like in Markdown
 	isNumbered := (node.ListFlags & ast.ListTypeOrdered) != 0
-	isDefinitionList := (node.ListFlags & ast.ListTypeDefinition) != 0
 	for number, item := range node.Children {
 		item, ok := item.(*ast.ListItem)
 		if !ok {
 			panic("rendering anything but list items is not supported")
 		}
-		isDefinition := ((item.ListFlags & ast.ListItemBeginningOfList) != 0) && isDefinitionList
+		isTerm := (item.ListFlags & ast.ListTypeTerm) == ast.ListTypeTerm
 		// this assumes github.com/gomarkdown/markdown can only produce
 		// list items that contain a child paragraph and possibly
 		// another list; this might not be true but I can hardly imagine
 		// a list item that contains anything else
 		if l := len(item.Children); l >= 1 {
+			// add extra line break to split up definitions
+			if isTerm && number > 0 {
+				w.Write(lineBreak)
+			}
 			for i := 0; i < level; i++ {
 				w.Write(itemIndent)
 			}
 			if isNumbered {
 				w.Write([]byte(fmt.Sprintf("%d. ", number+1)))
-			} else if !isDefinition {
+			} else if !isTerm {
 				w.Write(itemPrefix)
 			}
 			para, ok := item.Children[0].(*ast.Paragraph)
