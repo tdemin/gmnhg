@@ -42,6 +42,11 @@ var (
 	emphDelimiter      = []byte("*")
 	strongDelimiter    = []byte("**")
 	delDelimiter       = []byte("~~")
+	horizontalRule     = []byte("---")
+	subOpen            = []byte("_{")
+	subClose           = []byte("}")
+	supOpen            = []byte("^(")
+	supClose           = []byte(")")
 )
 
 var meaningfulCharsRegex = regexp.MustCompile(`\A[\s]+\z`)
@@ -121,6 +126,34 @@ func (r Renderer) blockquote(w io.Writer, node *ast.BlockQuote, entering bool) {
 	}
 }
 
+func (r Renderer) hr(w io.Writer, node *ast.HorizontalRule, entering bool) {
+	if entering {
+		w.Write(horizontalRule)
+		w.Write(lineBreak)
+		w.Write(lineBreak)
+	}
+}
+
+// Based on https://pages.uoregon.edu/ncp/Courses/MathInPlainTextEmail.html
+func (r Renderer) subscript(w io.Writer, node *ast.Subscript, entering bool) {
+	if entering {
+		if node := node.AsLeaf(); node != nil {
+			w.Write(subOpen)
+			w.Write([]byte(strings.ReplaceAll(string(node.Literal), "\n", " ")))
+			w.Write(subClose)
+		}
+	}
+}
+func (r Renderer) superscript(w io.Writer, node *ast.Superscript, entering bool) {
+	if entering {
+		if node := node.AsLeaf(); node != nil {
+			w.Write(supOpen)
+			w.Write([]byte(strings.ReplaceAll(string(node.Literal), "\n", " ")))
+			w.Write(supClose)
+		}
+	}
+}
+
 const gemtextHeadingLevelLimit = 3
 
 func (r Renderer) heading(w io.Writer, node *ast.Heading, entering bool) {
@@ -194,6 +227,14 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 				// line breaks and spaces and such from rendering
 				if !linksOnly {
 					r.text(w, child)
+				}
+			case *ast.Subscript:
+				if !linksOnly {
+					r.subscript(w, child, true)
+				}
+			case *ast.Superscript:
+				if !linksOnly {
+					r.superscript(w, child, true)
 				}
 			}
 		}
@@ -392,6 +433,8 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	switch node := node.(type) {
 	case *ast.BlockQuote:
 		r.blockquote(w, node, entering)
+	case *ast.HorizontalRule:
+		r.hr(w, node, entering)
 	case *ast.Heading:
 		r.heading(w, node, entering)
 		noNewLine = false
