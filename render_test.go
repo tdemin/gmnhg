@@ -27,7 +27,7 @@ func testRenderer(markdown []byte, expectedGemini []byte) func(*testing.T) {
 		if err != nil {
 			t.Error(fmt.Errorf("Error during rendering: %w", err))
 		}
-		if bytes.Compare(geminiContent, expectedGemini) != 0 {
+		if !bytes.Equal(geminiContent, expectedGemini) {
 			t.Error(fmt.Sprintf("Output does not match expected!\n\nActual output:\n\n%s\n%s\n%s\n\nExpected output:\n\n%s\n%s\n%s", divider, geminiContent, divider, divider, expectedGemini, divider))
 		}
 	}

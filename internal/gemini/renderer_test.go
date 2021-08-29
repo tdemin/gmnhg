@@ -28,7 +28,7 @@ func testRenderNodeStep(node ast.Node, entering bool, expectedGemini []byte, exp
 		if walkStatus != expectedWalkStatus {
 			t.Error(fmt.Sprintf("Walk status %T does not match expected value %T!", walkStatus, expectedWalkStatus))
 		}
-		if bytes.Compare(w.Bytes(), expectedGemini) != 0 {
+		if !bytes.Equal(w.Bytes(), expectedGemini) {
 			t.Error(fmt.Sprintf("Output does not match expected!\n\nActual output:\n\n%s\n%s\n%s\n\nExpected output:\n\n%s\n%s\n%s", divider, w.Bytes(), divider, divider, expectedGemini, divider))
 		}
 	}
