@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
-	
+
 	gemini "github.com/tdemin/gmnhg"
 )
 
@@ -13,12 +13,12 @@ var (
 )
 
 func TestHr(t *testing.T) {
-	t.Run("Dash",testRenderer([]byte("---"), []byte("---\n")))
-	t.Run("Asterisk",testRenderer([]byte("***"), []byte("---\n")))
-	t.Run("Underscore",testRenderer([]byte("___"), []byte("---\n")))
-	t.Run("Inline",testRenderer([]byte("Test ---"), []byte("Test ---\n")))
-	t.Run("Between paragraphs",testRenderer([]byte("Foo\n\n---\n\nBar"), []byte("Foo\n\n---\n\nBar\n")))
-	t.Run("Adjacent",testRenderer([]byte("Foo\n\n---\n\n---\n\nBar"), []byte("Foo\n\n---\n\n---\n\nBar\n")))
+	t.Run("Dash", testRenderer([]byte("---"), []byte("---\n")))
+	t.Run("Asterisk", testRenderer([]byte("***"), []byte("---\n")))
+	t.Run("Underscore", testRenderer([]byte("___"), []byte("---\n")))
+	t.Run("Inline", testRenderer([]byte("Test ---"), []byte("Test ---\n")))
+	t.Run("Between paragraphs", testRenderer([]byte("Foo\n\n---\n\nBar"), []byte("Foo\n\n---\n\nBar\n")))
+	t.Run("Adjacent", testRenderer([]byte("Foo\n\n---\n\n---\n\nBar"), []byte("Foo\n\n---\n\n---\n\nBar\n")))
 }
 
 func testRenderer(markdown []byte, expectedGemini []byte) func(*testing.T) {
