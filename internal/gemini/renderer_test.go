@@ -1,11 +1,13 @@
-package gemini
+package gemini_test
 
 import (
 	"bytes"
 	"fmt"
 	"testing"
 
-	gemini "github.com/tdemin/gmnhg"
+	"github.com/gomarkdown/markdown/ast"
+
+	. "github.com/tdemin/gmnhg/internal/gemini"
 )
 
 var (
@@ -13,22 +15,21 @@ var (
 )
 
 func TestHr(t *testing.T) {
-	t.Run("Dash", testRenderer([]byte("---"), []byte("---\n")))
-	t.Run("Asterisk", testRenderer([]byte("***"), []byte("---\n")))
-	t.Run("Underscore", testRenderer([]byte("___"), []byte("---\n")))
-	t.Run("Inline", testRenderer([]byte("Test ---"), []byte("Test ---\n")))
-	t.Run("Between paragraphs", testRenderer([]byte("Foo\n\n---\n\nBar"), []byte("Foo\n\n---\n\nBar\n")))
-	t.Run("Adjacent", testRenderer([]byte("Foo\n\n---\n\n---\n\nBar"), []byte("Foo\n\n---\n\n---\n\nBar\n")))
+	node := new(ast.HorizontalRule)
+	t.Run("Entering", testRenderNodeStep(node, true, []byte("---\n\n"), ast.GoToNext))
+	t.Run("Entered", testRenderNodeStep(node, false, []byte{}, ast.GoToNext))
 }
 
-func testRenderer(markdown []byte, expectedGemini []byte) func(*testing.T) {
+func testRenderNodeStep(node ast.Node, entering bool, expectedGemini []byte, expectedWalkStatus ast.WalkStatus) func(*testing.T) {
+	r := NewRenderer()
+	w := new(bytes.Buffer)
 	return func(t *testing.T) {
-		geminiContent, _, err := gemini.RenderMarkdown(markdown, gemini.Defaults)
-		if err != nil {
-			t.Error(fmt.Errorf("Error during rendering: %w", err))
+		walkStatus := r.RenderNode(w, node, entering)
+		if walkStatus != expectedWalkStatus {
+			t.Error(fmt.Sprintf("Walk status %T does not match expected value %T!", walkStatus, expectedWalkStatus))
 		}
-		if bytes.Compare(geminiContent, expectedGemini) != 0 {
-			t.Error(fmt.Sprintf("Output does not match expected!\n\nActual output:\n\n%s\n%s\n%s\n\nExpected output:\n\n%s\n%s\n%s", divider, geminiContent, divider, divider, expectedGemini, divider))
+		if bytes.Compare(w.Bytes(), expectedGemini) != 0 {
+			t.Error(fmt.Sprintf("Output does not match expected!\n\nActual output:\n\n%s\n%s\n%s\n\nExpected output:\n\n%s\n%s\n%s", divider, w.Bytes(), divider, divider, expectedGemini, divider))
 		}
 	}
 }
