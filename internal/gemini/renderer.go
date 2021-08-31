@@ -186,10 +186,66 @@ func (r Renderer) heading(w io.Writer, node *ast.Heading, entering bool) {
 	}
 }
 
+func extractLinks(node ast.Node) (stack []interface{}) {
+	if node := node.AsContainer(); node != nil {
+		for _, subnode := range node.Children {
+			stack = append(stack, extractLinks(subnode)...)
+		}
+	}
+	switch node := node.(type) {
+	case *ast.Image:
+		stack = append(stack, node)
+	case *ast.Link:
+		stack = append(stack, node)
+		// footnotes are represented as links which embed an extra node
+		// containing footnote text; the link itself is not considered a
+		// container
+		if node.Footnote != nil {
+			stack = append(stack, extractLinks(node.Footnote)...)
+		}
+	}
+	return stack
+}
+
+func (r Renderer) linksList(w io.Writer, links []interface{}) {
+	for _, link := range links {
+		switch link := link.(type) {
+		case *ast.Link:
+			r.link(w, link, true)
+		case *ast.Image:
+			r.image(w, link, true)
+		}
+		w.Write(lineBreak)
+	}
+}
+
+func isLinksOnly(node ast.Node) bool {
+	if node := node.AsContainer(); node != nil {
+		for _, child := range node.Children {
+			switch child := child.(type) {
+			case *ast.Link, *ast.Image:
+				continue
+			case *ast.Text:
+				// any meaningful text?
+				if meaningfulCharsRegex.Find(child.Literal) == nil {
+					return false
+				}
+				continue
+			}
+			return false
+		}
+		return true
+	}
+	switch node.(type) {
+	case *ast.Image, *ast.Link:
+		return true
+	}
+	return false
+}
+
 func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (noNewLine bool) {
 	if entering {
 		children := node.Children
-		linkStack := make([]ast.Node, 0, len(children))
 		// current version of gomarkdown/markdown finds an empty
 		// *ast.Text element before links/images, breaking the heuristic
 		if len(children) >= 2 {
@@ -200,22 +256,7 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 				children = children[1:]
 			}
 		}
-		linksOnly := func() bool {
-			for _, child := range children {
-				switch child := child.(type) {
-				case *ast.Link, *ast.Image:
-					continue
-				case *ast.Text:
-					// any meaningful text?
-					if meaningfulCharsRegex.Find(child.Literal) == nil {
-						return false
-					}
-					continue
-				}
-				return false
-			}
-			return true
-		}()
+		linksOnly := isLinksOnly(node)
 		noNewLine = linksOnly
 		for _, child := range children {
 			// only render links text in the paragraph if they're
@@ -225,7 +266,6 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 				if !linksOnly {
 					r.text(w, child)
 				}
-				linkStack = append(linkStack, child)
 			case *ast.Text, *ast.Code, *ast.Emph, *ast.Strong, *ast.Del:
 				// the condition prevents text blocks consisting only of
 				// line breaks and spaces and such from rendering
@@ -244,21 +284,6 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 		}
 		if !linksOnly {
 			w.Write(lineBreak)
-		}
-		// render a links block after paragraph
-		if len(linkStack) > 0 {
-			if !linksOnly {
-				w.Write(lineBreak)
-			}
-			for _, link := range linkStack {
-				switch link := link.(type) {
-				case *ast.Link:
-					r.link(w, link, true)
-				case *ast.Image:
-					r.image(w, link, true)
-				}
-				w.Write(lineBreak)
-			}
 		}
 	}
 	return
@@ -333,10 +358,11 @@ func (r Renderer) text(w io.Writer, node ast.Node) {
 	}
 }
 
-// TODO: this really should've been unified with text(), but having two
-// extra params for prefix/line breaks is not neat
 func (r Renderer) blockquoteText(w io.Writer, node ast.Node) {
 	delimiter := getNodeDelimiter(node)
+	if node, ok := node.(*ast.Link); ok && node.Footnote != nil {
+		fmt.Fprintf(w, "[^%d]", node.NoteID)
+	}
 	if node := node.AsLeaf(); node != nil {
 		// pad every line break with blockquote symbol
 		w.Write(delimiter)
@@ -435,9 +461,11 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	// container subroutines have to handle their subelements on
 	// themselves.
 	noNewLine := true
+	fetchLinks := false
 	switch node := node.(type) {
 	case *ast.BlockQuote:
 		r.blockquote(w, node, entering)
+		fetchLinks = true
 	case *ast.HorizontalRule:
 		r.hr(w, node, entering)
 	case *ast.Heading:
@@ -449,6 +477,7 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		case *ast.BlockQuote, *ast.ListItem, *ast.Footnotes:
 		default:
 			noNewLine = r.paragraph(w, node, entering)
+			fetchLinks = true
 		}
 	case *ast.CodeBlock:
 		r.code(w, node)
@@ -462,13 +491,22 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		if !node.IsFootnotesList && parentIsDocument && !entering {
 			r.list(w, node, 0)
 			noNewLine = false
+			fetchLinks = true
 		}
 	case *ast.Table:
 		r.table(w, node, entering)
 		noNewLine = false
+		fetchLinks = true
 	}
 	if !noNewLine && !entering {
 		w.Write(lineBreak)
+	}
+	if fetchLinks && !entering {
+		links := extractLinks(node)
+		if len(links) > 0 {
+			r.linksList(w, links)
+			w.Write(lineBreak)
+		}
 	}
 	return ast.GoToNext
 }
