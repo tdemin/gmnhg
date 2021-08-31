@@ -278,6 +278,11 @@ func main() {
 		} else if err != nil {
 			return err
 		}
+		// skip headless leaves from rendering
+		isLeafIndex := info.Name() == "index.md"
+		if isLeafIndex && metadata.IsHeadless {
+			return nil
+		}
 		key := strings.TrimPrefix(strings.TrimSuffix(path, ".md"), contentBase) + ".gmi"
 		p := gmnhg.Post{
 			Post:     gemText,
@@ -288,7 +293,7 @@ func main() {
 		if matches := pagePathRegex.FindStringSubmatch(path); matches != nil {
 			dirs := strings.Split(matches[1], "/")
 			// only include leaf resources pages in leaf index
-			if info.Name() != "index.md" && hasSubPath(leafIndexPaths, path) {
+			if !isLeafIndex && hasSubPath(leafIndexPaths, path) {
 				topLevelPosts[matches[1]] = append(topLevelPosts[matches[1]], p)
 			} else {
 				// include normal pages in all subdirectory indices
