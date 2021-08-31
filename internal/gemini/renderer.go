@@ -92,10 +92,14 @@ func getNodeDelimiter(node ast.Node) []byte {
 
 func (r Renderer) link(w io.Writer, node *ast.Link, entering bool) {
 	if entering {
-		w.Write(linkPrefix)
-		w.Write(node.Destination)
-		w.Write(space)
-		r.text(w, node)
+		if node.Footnote != nil {
+			fmt.Fprintf(w, "[^%d]: %s", node.NoteID, extractText(node.Footnote))
+		} else {
+			w.Write(linkPrefix)
+			w.Write(node.Destination)
+			w.Write(space)
+			r.text(w, node)
+		}
 	}
 }
 
@@ -282,10 +286,6 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 			panic("rendering anything but list items is not supported")
 		}
 		isTerm := (item.ListFlags & ast.ListTypeTerm) == ast.ListTypeTerm
-		// this assumes github.com/gomarkdown/markdown can only produce
-		// list items that contain a child paragraph and possibly
-		// another list; this might not be true but I can hardly imagine
-		// a list item that contains anything else
 		if l := len(item.Children); l >= 1 {
 			// add extra line break to split up definitions
 			if isTerm && number > 0 {
@@ -299,10 +299,7 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 			} else if !isTerm {
 				w.Write(itemPrefix)
 			}
-			para, ok := item.Children[0].(*ast.Paragraph)
-			if ok {
-				r.text(w, para)
-			}
+			r.text(w, item)
 			w.Write(lineBreak)
 			if l >= 2 {
 				if list, ok := item.Children[1].(*ast.List); ok {
@@ -315,6 +312,10 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 
 func (r Renderer) text(w io.Writer, node ast.Node) {
 	delimiter := getNodeDelimiter(node)
+	// special case for footnotes: we want them in the text
+	if node, ok := node.(*ast.Link); ok && node.Footnote != nil {
+		fmt.Fprintf(w, "[^%d]", node.NoteID)
+	}
 	if node := node.AsLeaf(); node != nil {
 		// replace all newlines in text with spaces, allowing for soft
 		// wrapping; this is recommended as per Gemini spec p. 5.4.1
@@ -427,8 +428,12 @@ func (r Renderer) table(w io.Writer, node *ast.Table, entering bool) {
 
 // RenderNode implements Renderer.RenderNode().
 func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.WalkStatus {
-	// despite most of the subroutines here accepting entering, most of
-	// them don't really need an extra pass
+	// entering in gomarkdown was made to have elements of type switch
+	// to enclose themselves within the second pass with entering =
+	// false, as Markdown is quite similar to HTML in its structure.
+	// As Gemtext is line-oriented, and not tag-oriented, most of
+	// container subroutines have to handle their subelements on
+	// themselves.
 	noNewLine := true
 	switch node := node.(type) {
 	case *ast.BlockQuote:
@@ -439,9 +444,9 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		r.heading(w, node, entering)
 		noNewLine = false
 	case *ast.Paragraph:
-		// blockquote wraps paragraphs which makes for an extra render
 		switch node.Parent.(type) {
-		case *ast.BlockQuote, *ast.ListItem:
+		// these (should) handle underlying paragraphs themselves
+		case *ast.BlockQuote, *ast.ListItem, *ast.Footnotes:
 		default:
 			noNewLine = r.paragraph(w, node, entering)
 		}
@@ -452,7 +457,9 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	case *ast.List:
 		// lists of level >= 2 are rendered recursively along with the
 		// first level; the list is a container
-		if _, parentIsDocument := node.Parent.(*ast.Document); parentIsDocument && !entering {
+		_, parentIsDocument := node.Parent.(*ast.Document)
+		// footnotes are rendered as links after the parent paragraph
+		if !node.IsFootnotesList && parentIsDocument && !entering {
 			r.list(w, node, 0)
 			noNewLine = false
 		}
