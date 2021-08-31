@@ -111,7 +111,6 @@ const (
 	defaultPageTemplate = "single"
 	indexMdFilename     = "_index.gmi.md"
 	indexFilename       = "index.gmi"
-	leafFilename        = "index.md"
 )
 
 const (
@@ -280,7 +279,8 @@ func main() {
 			return err
 		}
 		// skip headless leaves from rendering
-		if info.Name() == leafFilename && metadata.IsHeadless {
+		isLeafIndex := info.Name() == "index.md"
+		if isLeafIndex && metadata.IsHeadless {
 			return nil
 		}
 		key := strings.TrimPrefix(strings.TrimSuffix(path, ".md"), contentBase) + ".gmi"
@@ -293,7 +293,7 @@ func main() {
 		if matches := pagePathRegex.FindStringSubmatch(path); matches != nil {
 			dirs := strings.Split(matches[1], "/")
 			// only include leaf resources pages in leaf index
-			if info.Name() != leafFilename && hasSubPath(leafIndexPaths, path) {
+			if !isLeafIndex && hasSubPath(leafIndexPaths, path) {
 				topLevelPosts[matches[1]] = append(topLevelPosts[matches[1]], p)
 			} else {
 				// include normal pages in all subdirectory indices
