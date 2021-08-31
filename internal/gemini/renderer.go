@@ -42,6 +42,11 @@ var (
 	emphDelimiter      = []byte("*")
 	strongDelimiter    = []byte("**")
 	delDelimiter       = []byte("~~")
+	horizontalRule     = []byte("---")
+	subOpen            = []byte("_{")
+	subClose           = []byte("}")
+	supOpen            = []byte("^(")
+	supClose           = []byte(")")
 )
 
 var meaningfulCharsRegex = regexp.MustCompile(`\A[\s]+\z`)
@@ -87,10 +92,14 @@ func getNodeDelimiter(node ast.Node) []byte {
 
 func (r Renderer) link(w io.Writer, node *ast.Link, entering bool) {
 	if entering {
-		w.Write(linkPrefix)
-		w.Write(node.Destination)
-		w.Write(space)
-		r.text(w, node)
+		if node.Footnote != nil {
+			fmt.Fprintf(w, "[^%d]: %s", node.NoteID, extractText(node.Footnote))
+		} else {
+			w.Write(linkPrefix)
+			w.Write(node.Destination)
+			w.Write(space)
+			r.text(w, node)
+		}
 	}
 }
 
@@ -117,6 +126,34 @@ func (r Renderer) blockquote(w io.Writer, node *ast.BlockQuote, entering bool) {
 				w.Write(lineBreak)
 				w.Write(lineBreak)
 			}
+		}
+	}
+}
+
+func (r Renderer) hr(w io.Writer, node *ast.HorizontalRule, entering bool) {
+	if entering {
+		w.Write(horizontalRule)
+		w.Write(lineBreak)
+		w.Write(lineBreak)
+	}
+}
+
+// Based on https://pages.uoregon.edu/ncp/Courses/MathInPlainTextEmail.html
+func (r Renderer) subscript(w io.Writer, node *ast.Subscript, entering bool) {
+	if entering {
+		if node := node.AsLeaf(); node != nil {
+			w.Write(subOpen)
+			w.Write([]byte(strings.ReplaceAll(string(node.Literal), "\n", " ")))
+			w.Write(subClose)
+		}
+	}
+}
+func (r Renderer) superscript(w io.Writer, node *ast.Superscript, entering bool) {
+	if entering {
+		if node := node.AsLeaf(); node != nil {
+			w.Write(supOpen)
+			w.Write([]byte(strings.ReplaceAll(string(node.Literal), "\n", " ")))
+			w.Write(supClose)
 		}
 	}
 }
@@ -195,6 +232,14 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 				if !linksOnly {
 					r.text(w, child)
 				}
+			case *ast.Subscript:
+				if !linksOnly {
+					r.subscript(w, child, true)
+				}
+			case *ast.Superscript:
+				if !linksOnly {
+					r.superscript(w, child, true)
+				}
 			}
 		}
 		if !linksOnly {
@@ -267,6 +312,10 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 
 func (r Renderer) text(w io.Writer, node ast.Node) {
 	delimiter := getNodeDelimiter(node)
+	// special case for footnotes: we want them in the text
+	if node, ok := node.(*ast.Link); ok && node.Footnote != nil {
+		fmt.Fprintf(w, "[^%d]", node.NoteID)
+	}
 	if node := node.AsLeaf(); node != nil {
 		// replace all newlines in text with spaces, allowing for soft
 		// wrapping; this is recommended as per Gemini spec p. 5.4.1
@@ -377,18 +426,20 @@ func (r Renderer) table(w io.Writer, node *ast.Table, entering bool) {
 	}
 }
 
-func (r Renderer) footnotes(w io.Writer, node *ast.Footnotes, entering bool) {
-	// does nothing yet
-}
-
 // RenderNode implements Renderer.RenderNode().
 func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.WalkStatus {
-	// despite most of the subroutines here accepting entering, most of
-	// them don't really need an extra pass
+	// entering in gomarkdown was made to have elements of type switch
+	// to enclose themselves within the second pass with entering =
+	// false, as Markdown is quite similar to HTML in its structure.
+	// As Gemtext is line-oriented, and not tag-oriented, most of
+	// container subroutines have to handle their subelements on
+	// themselves.
 	noNewLine := true
 	switch node := node.(type) {
 	case *ast.BlockQuote:
 		r.blockquote(w, node, entering)
+	case *ast.HorizontalRule:
+		r.hr(w, node, entering)
 	case *ast.Heading:
 		r.heading(w, node, entering)
 		noNewLine = false
@@ -406,15 +457,15 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	case *ast.List:
 		// lists of level >= 2 are rendered recursively along with the
 		// first level; the list is a container
-		if _, parentIsDocument := node.Parent.(*ast.Document); parentIsDocument && !entering {
+		_, parentIsDocument := node.Parent.(*ast.Document)
+		// footnotes are rendered as links after the parent paragraph
+		if !node.IsFootnotesList && parentIsDocument && !entering {
 			r.list(w, node, 0)
 			noNewLine = false
 		}
 	case *ast.Table:
 		r.table(w, node, entering)
 		noNewLine = false
-	case *ast.Footnotes:
-		r.footnotes(w, node, entering)
 	}
 	if !noNewLine && !entering {
 		w.Write(lineBreak)
