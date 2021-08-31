@@ -278,6 +278,10 @@ func main() {
 		} else if err != nil {
 			return err
 		}
+		// skip headless leaves from rendering
+		if info.Name() == "index.md" && metadata.IsHeadless {
+			return nil
+		}
 		key := strings.TrimPrefix(strings.TrimSuffix(path, ".md"), contentBase) + ".gmi"
 		p := gmnhg.Post{
 			Post:     gemText,
