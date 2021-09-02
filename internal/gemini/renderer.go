@@ -186,7 +186,7 @@ func (r Renderer) heading(w io.Writer, node *ast.Heading, entering bool) {
 	}
 }
 
-func extractLinks(node ast.Node) (stack []interface{}) {
+func extractLinks(node ast.Node) (stack []ast.Node) {
 	if node := node.AsContainer(); node != nil {
 		for _, subnode := range node.Children {
 			stack = append(stack, extractLinks(subnode)...)
@@ -207,7 +207,7 @@ func extractLinks(node ast.Node) (stack []interface{}) {
 	return stack
 }
 
-func (r Renderer) linksList(w io.Writer, links []interface{}) {
+func (r Renderer) linksList(w io.Writer, links []ast.Node) {
 	for _, link := range links {
 		switch link := link.(type) {
 		case *ast.Link:
