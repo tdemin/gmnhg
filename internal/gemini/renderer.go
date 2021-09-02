@@ -255,18 +255,16 @@ func (r Renderer) linksList(w io.Writer, links []ast.Node) {
 }
 
 func isLinksOnlyParagraph(node *ast.Paragraph) bool {
-	if node := node.AsContainer(); node != nil {
-		for _, child := range node.Children {
-			switch child := child.(type) {
-			case *ast.Text:
-				if emptyLineRegex.Find(child.Literal) != nil {
-					continue
-				}
-			case *ast.Link, *ast.Image:
+	for _, child := range node.Children {
+		switch child := child.(type) {
+		case *ast.Text:
+			if emptyLineRegex.Find(child.Literal) != nil {
 				continue
 			}
-			return false
+		case *ast.Link, *ast.Image:
+			continue
 		}
+		return false
 	}
 	return true
 }
