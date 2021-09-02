@@ -269,6 +269,25 @@ func isLinksOnlyParagraph(node *ast.Paragraph) bool {
 	return true
 }
 
+func isLinksOnlyList(node *ast.List) bool {
+	for _, child := range node.Children {
+		child, ok := child.(*ast.ListItem)
+		if !ok {
+			return false // should never happen
+		}
+		for _, liChild := range child.Children {
+			liChild, ok := liChild.(*ast.Paragraph)
+			if !ok {
+				return false // sublist, etc
+			}
+			if !isLinksOnlyParagraph(liChild) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (noNewLine bool) {
 	linksOnly := isLinksOnlyParagraph(node)
 	noNewLine = linksOnly
@@ -508,8 +527,10 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		_, parentIsDocument := node.Parent.(*ast.Document)
 		// footnotes are rendered as links after the parent paragraph
 		if !node.IsFootnotesList && parentIsDocument && !entering {
-			r.list(w, node, 0)
-			noNewLine = false
+			if !isLinksOnlyList(node) {
+				r.list(w, node, 0)
+				noNewLine = false
+			}
 			fetchLinks = true
 		}
 	case *ast.Table:
