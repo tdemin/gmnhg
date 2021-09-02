@@ -368,7 +368,12 @@ func (r Renderer) text(w io.Writer, node ast.Node) {
 	if node := node.AsContainer(); node != nil {
 		w.Write(delimiter)
 		for _, child := range node.Children {
-			r.text(w, child)
+			// skip non-text child elements from rendering
+			switch child := child.(type) {
+			case *ast.List:
+			default:
+				r.text(w, child)
+			}
 		}
 		w.Write(delimiter)
 	}
