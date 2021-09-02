@@ -18,7 +18,6 @@
 package gemini
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"regexp"
@@ -49,7 +48,8 @@ var (
 	supClose           = []byte(")")
 )
 
-var meaningfulCharsRegex = regexp.MustCompile(`\A[\s]+\z`)
+// matches a FULL string that contains no non-whitespace characters
+var emptyLineRegex = regexp.MustCompile(`\A[\s]*\z`)
 
 const timestampFormat = "2006-01-02 15:04"
 
@@ -254,70 +254,49 @@ func (r Renderer) linksList(w io.Writer, links []ast.Node) {
 	}
 }
 
-func isLinksOnly(node ast.Node) bool {
+func isLinksOnlyParagraph(node *ast.Paragraph) bool {
 	if node := node.AsContainer(); node != nil {
 		for _, child := range node.Children {
 			switch child := child.(type) {
-			case *ast.Link, *ast.Image:
-				continue
 			case *ast.Text:
-				// any meaningful text?
-				if meaningfulCharsRegex.Find(child.Literal) == nil {
-					return false
+				if emptyLineRegex.Find(child.Literal) != nil {
+					continue
 				}
+			case *ast.Link, *ast.Image:
 				continue
 			}
 			return false
 		}
-		return true
 	}
-	switch node.(type) {
-	case *ast.Image, *ast.Link:
-		return true
-	}
-	return false
+	return true
 }
 
 func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (noNewLine bool) {
+	linksOnly := isLinksOnlyParagraph(node)
+	noNewLine = linksOnly
 	if entering {
 		children := node.Children
 		// current version of gomarkdown/markdown finds an empty
 		// *ast.Text element before links/images, breaking the heuristic
 		if len(children) >= 2 {
-			firstChild := children[0]
-			_, elementIsText := firstChild.(*ast.Text)
-			asLeaf := firstChild.AsLeaf()
-			if elementIsText && asLeaf != nil && len(asLeaf.Literal) == 0 {
+			firstChild, elementIsText := children[0].(*ast.Text)
+			if elementIsText && len(firstChild.Literal) == 0 {
 				children = children[1:]
 			}
 		}
-		linksOnly := isLinksOnly(node)
-		noNewLine = linksOnly
-		for _, child := range children {
-			// only render links text in the paragraph if they're
-			// combined with some other text on page
-			switch child := child.(type) {
-			case *ast.Link, *ast.Image:
-				if !linksOnly {
+		if !linksOnly {
+			for _, child := range children {
+				// only render links text in the paragraph if they're
+				// combined with some other text on page
+				switch child := child.(type) {
+				case *ast.Text, *ast.Code, *ast.Emph, *ast.Strong, *ast.Del, *ast.Link, *ast.Image:
 					r.text(w, child)
-				}
-			case *ast.Text, *ast.Code, *ast.Emph, *ast.Strong, *ast.Del:
-				// the condition prevents text blocks consisting only of
-				// line breaks and spaces and such from rendering
-				if !linksOnly {
-					r.text(w, child)
-				}
-			case *ast.Subscript:
-				if !linksOnly {
+				case *ast.Subscript:
 					r.subscript(w, child, true)
-				}
-			case *ast.Superscript:
-				if !linksOnly {
+				case *ast.Superscript:
 					r.superscript(w, child, true)
 				}
 			}
-		}
-		if !linksOnly {
 			w.Write(lineBreak)
 		}
 	}
@@ -370,6 +349,8 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 	}
 }
 
+var lineBreakCharacters = regexp.MustCompile(`[\n\r]+`)
+
 func (r Renderer) text(w io.Writer, node ast.Node) {
 	delimiter := getNodeDelimiter(node)
 	// special case for footnotes: we want them in the text
@@ -380,7 +361,7 @@ func (r Renderer) text(w io.Writer, node ast.Node) {
 		// replace all newlines in text with spaces, allowing for soft
 		// wrapping; this is recommended as per Gemini spec p. 5.4.1
 		w.Write(delimiter)
-		w.Write([]byte(strings.ReplaceAll(string(node.Literal), "\n", " ")))
+		w.Write(lineBreakCharacters.ReplaceAll(node.Literal, space))
 		w.Write(delimiter)
 		return
 	}
@@ -401,7 +382,7 @@ func (r Renderer) blockquoteText(w io.Writer, node ast.Node) {
 	if node := node.AsLeaf(); node != nil {
 		// pad every line break with blockquote symbol
 		w.Write(delimiter)
-		w.Write([]byte(bytes.ReplaceAll(node.Literal, lineBreak, quoteBrPrefix)))
+		w.Write(lineBreakCharacters.ReplaceAll(node.Literal, quoteBrPrefix))
 		w.Write(delimiter)
 		return
 	}
