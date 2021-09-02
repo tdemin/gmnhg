@@ -207,15 +207,50 @@ func extractLinks(node ast.Node) (stack []ast.Node) {
 	return stack
 }
 
-func (r Renderer) linksList(w io.Writer, links []ast.Node) {
+func (r Renderer) renderLinks(w io.Writer, links []ast.Node) (count uint) {
 	for _, link := range links {
-		switch link := link.(type) {
-		case *ast.Link:
+		if link, ok := link.(*ast.Link); ok && link.Footnote == nil {
 			r.link(w, link, true)
-		case *ast.Image:
-			r.image(w, link, true)
+			w.Write(lineBreak)
+			count++
 		}
-		w.Write(lineBreak)
+	}
+	return
+}
+
+func (r Renderer) renderFootnotes(w io.Writer, links []ast.Node) (count uint) {
+	for _, link := range links {
+		if link, ok := link.(*ast.Link); ok && link.Footnote != nil {
+			r.link(w, link, true)
+			w.Write(lineBreak)
+			count++
+		}
+	}
+	return
+}
+
+func (r Renderer) renderImages(w io.Writer, links []ast.Node) (count uint) {
+	for _, link := range links {
+		if link, ok := link.(*ast.Image); ok {
+			r.image(w, link, true)
+			w.Write(lineBreak)
+			count++
+		}
+	}
+	return
+}
+
+func (r Renderer) linksList(w io.Writer, links []ast.Node) {
+	for _, renderer := range []func(Renderer, io.Writer, []ast.Node) uint{
+		Renderer.renderFootnotes,
+		Renderer.renderImages,
+		Renderer.renderLinks,
+	} {
+		linksRendered := renderer(r, w, links)
+		// ensure breaks between link blocks of the same type
+		if linksRendered > 0 {
+			w.Write(lineBreak)
+		}
 	}
 }
 
@@ -505,7 +540,6 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		links := extractLinks(node)
 		if len(links) > 0 {
 			r.linksList(w, links)
-			w.Write(lineBreak)
 		}
 	}
 	return ast.GoToNext
