@@ -179,9 +179,7 @@ func (r Renderer) heading(w io.Writer, node *ast.Heading, entering bool) {
 			heading[gemtextHeadingLevelLimit] = ' '
 		}
 		w.Write(heading)
-		for _, text := range node.Children {
-			w.Write(text.AsLeaf().Literal)
-		}
+		r.text(w, node)
 	} else {
 		w.Write(lineBreak)
 	}
