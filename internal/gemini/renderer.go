@@ -18,6 +18,7 @@
 package gemini
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"regexp"
@@ -368,68 +369,47 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 
 var lineBreakCharacters = regexp.MustCompile(`[\n\r]+`)
 
-func (r Renderer) text(w io.Writer, node ast.Node) {
+func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
+	buf := bytes.Buffer{}
 	delimiter := getNodeDelimiter(node)
 	// special case for footnotes: we want them in the text
 	if node, ok := node.(*ast.Link); ok && node.Footnote != nil {
-		fmt.Fprintf(w, "[^%d]", node.NoteID)
+		fmt.Fprintf(&buf, "[^%d]", node.NoteID)
 	}
 	if node := node.AsLeaf(); node != nil {
-		// replace all newlines in text with spaces, allowing for soft
-		// wrapping; this is recommended as per Gemini spec p. 5.4.1
-		w.Write(delimiter)
-		w.Write(lineBreakCharacters.ReplaceAll(node.Literal, space))
-		w.Write(delimiter)
-		return
+		// replace all newlines in text with preferred symbols; this may
+		// be spaces for general text, allowing for soft wrapping, which
+		// is recommended as per Gemini spec p. 5.4.1, or line breaks
+		// with a blockquote symbols for blockquotes, or just nothing
+		buf.Write(delimiter)
+		buf.Write(lineBreakCharacters.ReplaceAll(node.Literal, replacement))
+		buf.Write(delimiter)
 	}
 	if node := node.AsContainer(); node != nil {
-		w.Write(delimiter)
+		buf.Write(delimiter)
 		for _, child := range node.Children {
 			// skip non-text child elements from rendering
 			switch child := child.(type) {
 			case *ast.List:
 			default:
-				r.text(w, child)
+				buf.Write(textWithNewlineReplacement(child, replacement))
 			}
 		}
-		w.Write(delimiter)
+		buf.Write(delimiter)
 	}
+	return buf.Bytes()
+}
+
+func (r Renderer) text(w io.Writer, node ast.Node) {
+	w.Write(textWithNewlineReplacement(node, space))
 }
 
 func (r Renderer) blockquoteText(w io.Writer, node ast.Node) {
-	delimiter := getNodeDelimiter(node)
-	if node, ok := node.(*ast.Link); ok && node.Footnote != nil {
-		fmt.Fprintf(w, "[^%d]", node.NoteID)
-	}
-	if node := node.AsLeaf(); node != nil {
-		// pad every line break with blockquote symbol
-		w.Write(delimiter)
-		w.Write(lineBreakCharacters.ReplaceAll(node.Literal, quoteBrPrefix))
-		w.Write(delimiter)
-		return
-	}
-	if node := node.AsContainer(); node != nil {
-		w.Write(delimiter)
-		for _, child := range node.Children {
-			r.blockquoteText(w, child)
-		}
-		w.Write(delimiter)
-	}
+	w.Write(textWithNewlineReplacement(node, quoteBrPrefix))
 }
 
 func extractText(node ast.Node) string {
-	delimiter := getNodeDelimiter(node)
-	if node := node.AsLeaf(); node != nil {
-		return string(delimiter) + strings.ReplaceAll(string(node.Literal), "\n", " ") + string(delimiter)
-	}
-	if node := node.AsContainer(); node != nil {
-		b := strings.Builder{}
-		for _, child := range node.Children {
-			b.WriteString(string(delimiter) + extractText(child) + string(delimiter))
-		}
-		return b.String()
-	}
-	panic("encountered a non-leaf & non-container node")
+	return string(textWithNewlineReplacement(node, space))
 }
 
 func (r Renderer) tableHead(t *tablewriter.Table, node *ast.TableHeader) {
