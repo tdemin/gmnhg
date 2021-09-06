@@ -462,7 +462,7 @@ func main() {
 		cnt := map[string]interface{}{
 			"Posts":   posts,
 			"Dirname": dirname,
-			"Link":    dirname + "/" + rssFilename,
+			"Link":    path.Join(dirname, rssFilename),
 			"Site":    sc,
 		}
 		buf := bytes.Buffer{}
