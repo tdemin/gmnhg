@@ -96,12 +96,16 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"encoding/json"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
+
+	"github.com/BurntSushi/toml"
+	"gopkg.in/yaml.v2"
 
 	gemini "github.com/tdemin/gmnhg"
 	"github.com/tdemin/gmnhg/internal/gmnhg"
@@ -111,6 +115,7 @@ const (
 	defaultPageTemplate = "single"
 	indexMdFilename     = "_index.gmi.md"
 	indexFilename       = "index.gmi"
+	rssFilename         = "rss.xml"
 )
 
 const (
@@ -127,6 +132,13 @@ var (
 )
 
 var hugoConfigFiles = []string{"config.toml", "config.yaml", "config.json"}
+
+type SiteConfig struct {
+	GeminiBaseURL string `yaml:"geminiBaseURL"`
+	Title			    string `yaml:"title"`
+	Copyright     string `yaml:"copyright"`
+	LanguageCode  string `yaml:"languageCode"`
+}
 
 func copyFile(dst, src string) error {
 	input, err := os.Open(src)
@@ -200,9 +212,28 @@ func main() {
 	}
 
 	configFound := false
+	var siteConf SiteConfig
 	for _, filename := range hugoConfigFiles {
 		if fileInfo, err := os.Stat(filename); !(os.IsNotExist(err) || fileInfo.IsDir()) {
 			configFound = true
+			buf, err := ioutil.ReadFile(filename)
+			if err != nil {
+				panic(err)
+			}
+			switch ext := filepath.Ext(filename); ext {
+				case ".toml":
+					if err := toml.Unmarshal(buf, &siteConf); err != nil {
+						panic(err)
+					}
+				case ".yaml":
+					if err := yaml.Unmarshal(buf, &siteConf); err != nil {
+						panic(err)
+					}
+				case ".json":
+					if err := json.Unmarshal(buf, &siteConf); err != nil {
+						panic(err)
+					}
+			}
 			break
 		}
 	}
@@ -285,9 +316,9 @@ func main() {
 		}
 		key := strings.TrimPrefix(strings.TrimSuffix(path, ".md"), contentBase) + ".gmi"
 		p := gmnhg.Post{
-			Post:     gemText,
-			Link:     key,
-			Metadata: metadata,
+			Post:      gemText,
+			Link:      key,
+			Metadata:  metadata,
 		}
 		posts[key] = p
 		if matches := pagePathRegex.FindStringSubmatch(path); matches != nil {
@@ -305,6 +336,7 @@ func main() {
 				for _, dir := range dirs {
 					topLevelPosts[dir] = append(topLevelPosts[dir], p)
 				}
+				topLevelPosts[""] = append(topLevelPosts[""], p)
 			}
 		}
 		return nil
@@ -353,6 +385,10 @@ func main() {
 	}
 	// render indexes for top-level dirs
 	for dirname, posts := range topLevelPosts {
+		// skip the main index
+		if dirname == "" {
+			continue
+		}
 		tmpl, hasTmpl := templates["top/"+dirname]
 		if !hasTmpl {
 			continue
@@ -401,6 +437,41 @@ func main() {
 	}
 	if err := writeFile(path.Join(outputDir, indexFilename), buf.Bytes()); err != nil {
 		panic(err)
+	}
+
+	// render RSS/Atom feeds
+	for dirname, posts := range topLevelPosts {
+		// do not render RSS for leaf paths
+		if hasSubPath(leafIndexPaths, contentBase+dirname+"/") {
+			continue
+		}
+		tmpl, hasTmpl := templates["top/"+dirname+".rss"]
+		if !hasTmpl {
+			if t, hasTmpl := templates["rss"]; dirname == "" && hasTmpl {
+				tmpl = t
+			} else {
+				tmpl = defaultRssTemplate
+			}
+		}
+		sc := map[string]interface{}{
+			"GeminiBaseURL": siteConf.GeminiBaseURL,
+			"Title":	       siteConf.Title,
+			"Copyright":     siteConf.Copyright,
+			"LanguageCode":  siteConf.LanguageCode,
+		}
+		cnt := map[string]interface{}{
+			"Posts":   posts,
+			"Dirname": dirname,
+			"Link":    dirname+"/"+rssFilename,
+			"Site":    sc,
+		}
+		buf := bytes.Buffer{}
+		if err := tmpl.Execute(&buf, cnt); err != nil {
+			panic(err)
+		}
+		if err := writeFile(path.Join(outputDir, dirname, rssFilename), buf.Bytes()); err != nil {
+			panic(err)
+		}
 	}
 
 	// copy page resources to output dir

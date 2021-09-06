@@ -36,6 +36,7 @@ type HugoMetadata struct {
 	PostIsDraft bool      `yaml:"draft"`
 	PostLayout  string    `yaml:"layout"`
 	PostDate    time.Time `yaml:"date"`
+	PostSummary string    `yaml:"summary"`
 	IsHeadless  bool      `yaml:"headless"`
 }
 

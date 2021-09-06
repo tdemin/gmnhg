@@ -49,3 +49,30 @@ var defaultIndexTemplate = mustParseTmpl("index", `# Site index
 {{ range $p := $posts | sortPosts }}=> {{ $p.Link }} {{ $p.Metadata.PostDate.Format "2006-01-02 15:04" }} - {{ $p.Metadata.PostTitle }}
 {{ end }}{{ end }}
 `)
+
+var defaultRssTemplate = mustParseTmpl("rss", `{{- $Site := .Site -}}
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>{{ if $Site.Title }}{{ $Site.Title }}{{ else }}Site feed{{ with .Dirname }} for {{.}}{{end}}{{end}}</title>
+    <link>{{ $Site.GeminiBaseURL }}{{ .Link }}</link>
+    <description>Recent content{{ with .Dirname }} in {{.}}{{end}}{{ with $Site.Title }} on {{.}}{{end}}</description>
+    <generator>gmnhg</generator>{{ with $Site.LanguageCode }}
+    <language>{{.}}</language>{{end}}{{ with $Site.Author.email }}
+    <managingEditor>{{.}}{{ with $Site.Author.name }} ({{.}}){{end}}</managingEditor>
+    <webMaster>{{.}}{{ with $Site.Author.name }} ({{.}}){{end}}</webMaster>{{end}}{{ with $Site.Copyright }}
+    <copyright>{{.}}</copyright>{{end}}
+    <lastBuildDate>{{ now.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</lastBuildDate>
+    {{ printf "<atom:link href=%q rel=\"self\" type=\"application/rss+xml\" />" .Link }}
+    {{ range $i, $p := .Posts | sortPosts }}{{ if lt $i 25 }}
+    <item>
+      <title>{{ if $p.Metadata.PostTitle }}{{ $p.Metadata.PostTitle }}{{ else }}{{ $p.Link }}{{end}}</title>
+      <link>{{ $Site.GeminiBaseURL }}{{ $p.Link }}</link>
+      <pubDate>{{ $p.Metadata.PostDate.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</pubDate>
+      <guid>{{ $Site.GeminiBaseURL }}{{ $p.Link }}</guid>
+      <description>{{ $p.Metadata.PostSummary }}</description>
+    </item>
+    {{end}}{{end}}
+  </channel>
+</rss>
+`)
