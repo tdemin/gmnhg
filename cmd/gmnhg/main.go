@@ -91,12 +91,12 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"encoding/json"
 	"os"
 	"path"
 	"path/filepath"
@@ -135,7 +135,7 @@ var hugoConfigFiles = []string{"config.toml", "config.yaml", "config.json"}
 
 type SiteConfig struct {
 	GeminiBaseURL string `yaml:"geminiBaseURL"`
-	Title			    string `yaml:"title"`
+	Title         string `yaml:"title"`
 	Copyright     string `yaml:"copyright"`
 	LanguageCode  string `yaml:"languageCode"`
 }
@@ -221,18 +221,18 @@ func main() {
 				panic(err)
 			}
 			switch ext := filepath.Ext(filename); ext {
-				case ".toml":
-					if err := toml.Unmarshal(buf, &siteConf); err != nil {
-						panic(err)
-					}
-				case ".yaml":
-					if err := yaml.Unmarshal(buf, &siteConf); err != nil {
-						panic(err)
-					}
-				case ".json":
-					if err := json.Unmarshal(buf, &siteConf); err != nil {
-						panic(err)
-					}
+			case ".toml":
+				if err := toml.Unmarshal(buf, &siteConf); err != nil {
+					panic(err)
+				}
+			case ".yaml":
+				if err := yaml.Unmarshal(buf, &siteConf); err != nil {
+					panic(err)
+				}
+			case ".json":
+				if err := json.Unmarshal(buf, &siteConf); err != nil {
+					panic(err)
+				}
 			}
 			break
 		}
@@ -316,9 +316,9 @@ func main() {
 		}
 		key := strings.TrimPrefix(strings.TrimSuffix(path, ".md"), contentBase) + ".gmi"
 		p := gmnhg.Post{
-			Post:      gemText,
-			Link:      key,
-			Metadata:  metadata,
+			Post:     gemText,
+			Link:     key,
+			Metadata: metadata,
 		}
 		posts[key] = p
 		if matches := pagePathRegex.FindStringSubmatch(path); matches != nil {
@@ -455,14 +455,14 @@ func main() {
 		}
 		sc := map[string]interface{}{
 			"GeminiBaseURL": siteConf.GeminiBaseURL,
-			"Title":	       siteConf.Title,
+			"Title":         siteConf.Title,
 			"Copyright":     siteConf.Copyright,
 			"LanguageCode":  siteConf.LanguageCode,
 		}
 		cnt := map[string]interface{}{
 			"Posts":   posts,
 			"Dirname": dirname,
-			"Link":    dirname+"/"+rssFilename,
+			"Link":    dirname + "/" + rssFilename,
 			"Site":    sc,
 		}
 		buf := bytes.Buffer{}
