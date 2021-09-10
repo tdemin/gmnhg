@@ -54,6 +54,14 @@ Usage of md2gmn:
 md2gmn is mainly made to facilitate testing the Gemtext renderer but
 can be used as a standalone program as well.
 
+## Site configuration
+
+For RSS feeds to use correct URLs, you should define geminiBaseURL in
+Hugo's configuration file (config.toml, config.yaml, or config.json).
+
+Other attributes from this file, such as site title, will also be used
+during RSS feed generation if they are defined.
+
 ## License
 
 This program is redistributed under the terms and conditions of the GNU
