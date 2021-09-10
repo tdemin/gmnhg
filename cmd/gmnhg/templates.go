@@ -51,12 +51,13 @@ var defaultIndexTemplate = mustParseTmpl("index", `# Site index
 `)
 
 var defaultRssTemplate = mustParseTmpl("rss", `{{- $Site := .Site -}}
+{{- $Dirname := trimPrefix "/" .Dirname -}}
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>{{ if $Site.Title }}{{ html $Site.Title }}{{ else }}Site feed{{ with .Dirname }} for {{ html . }}{{end}}{{end}}</title>
     <link>{{ html (list (trimSuffix "/" $Site.GeminiBaseURL) .Link | join "/") }}</link>
-    <description>Recent content{{ with .Dirname }} in {{ html . }}{{end}}{{ with $Site.Title }} on {{ html . }}{{end}}</description>
+    <description>Recent content{{ with $Dirname }} in {{ html . }}{{end}}{{ with $Site.Title }} on {{ html . }}{{end}}</description>
     <generator>gmnhg</generator>{{ with $Site.LanguageCode }}
     <language>{{ html .}}</language>{{end}}{{ with $Site.Author.email }}
     <managingEditor>{{ html . }}{{ with $Site.Author.name }} ({{ html . }}){{end}}</managingEditor>
