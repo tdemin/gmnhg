@@ -325,7 +325,7 @@ func main() {
 			dirs := strings.Split(matches[1], "/")
 			// only include leaf resources pages in leaf index
 			if !isLeafIndex && hasSubPath(leafIndexPaths, path) {
-				topLevelPosts["/" + matches[1]] = append(topLevelPosts["/" + matches[1]], p)
+				topLevelPosts["/"+matches[1]] = append(topLevelPosts["/"+matches[1]], p)
 			} else {
 				// include normal pages in all subdirectory indices
 				for i, dir := range dirs {
@@ -334,7 +334,7 @@ func main() {
 					}
 				}
 				for _, dir := range dirs {
-					topLevelPosts["/" + dir] = append(topLevelPosts["/" + dir], p)
+					topLevelPosts["/"+dir] = append(topLevelPosts["/"+dir], p)
 				}
 				topLevelPosts["/"] = append(topLevelPosts["/"], p)
 			}
@@ -442,7 +442,7 @@ func main() {
 	// render RSS/Atom feeds
 	for dirname, posts := range topLevelPosts {
 		// do not render RSS for leaf paths
-		if hasSubPath(leafIndexPaths, path.Join(contentBase, dirname) + "/") {
+		if hasSubPath(leafIndexPaths, path.Join(contentBase, dirname)+"/") {
 			continue
 		}
 		tmpl, hasTmpl := templates["top"+dirname+".rss"]
