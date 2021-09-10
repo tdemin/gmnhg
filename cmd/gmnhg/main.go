@@ -448,7 +448,7 @@ func main() {
 		if hasSubPath(leafIndexPaths, path.Join(contentBase, dirname)+"/") {
 			continue
 		}
-		tmpl, hasTmpl := templates["top"+dirname+".rss"]
+		tmpl, hasTmpl := templates["top"+dirname+"_rss"]
 		if !hasTmpl {
 			if rootTmpl, hasTmpl := templates["rss"]; dirname == "/" && hasTmpl {
 				tmpl = rootTmpl
