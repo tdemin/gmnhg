@@ -47,7 +47,7 @@ var defaultIndexTemplate = mustParseTmpl("index", `# Site index
 {{- range $dir, $posts := .PostData }}{{ if and (ne $dir "/") (eq (dir $dir) "/") }}
 Index of {{ trimPrefix "/" $dir }}:
 
-{{ range $p := $posts | sortPosts }}=> {{ regexReplaceAll "/index\\.gmi$" $p.Link "/" }} {{ $p.Metadata.PostDate.Format "2006-01-02 15:04" }}{{ with $p.Metadata.PostTitle }} - {{ . }}{{end}}
+{{ range $p := $posts | sortPosts }}=> $p.Link {{ $p.Metadata.PostDate.Format "2006-01-02 15:04" }}{{ with $p.Metadata.PostTitle }} - {{ . }}{{end}}
 {{ end }}{{ end }}{{ end }}
 `)
 
@@ -69,7 +69,7 @@ var defaultRssTemplate = mustParseTmpl("rss", `{{- $Site := .Site -}}
     <lastBuildDate>{{ now.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</lastBuildDate>
     {{ printf "<atom:link href=%q rel=\"self\" type=\"application/rss+xml\" />" $RssLink }}
     {{ range $i, $p := .Posts | sortPosts }}{{ if lt $i 25 }}
-    {{- $AbsURL := list (trimSuffix "/" $Site.GeminiBaseURL) (trimPrefix "/" (regexReplaceAll "/index\\.gmi$" $p.Link "/")) | join "/" | html }}
+    {{- $AbsURL := list (trimSuffix "/" $Site.GeminiBaseURL) (trimPrefix "/" $p.Link) | join "/" | html }}
     <item>
       <title>{{ if $p.Metadata.PostTitle }}{{ html $p.Metadata.PostTitle }}{{ else }}{{ trimPrefix "/" $p.Link | html }}{{end}}</title>
       <link>{{ $AbsURL }}</link>
