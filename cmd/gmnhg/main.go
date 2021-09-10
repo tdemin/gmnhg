@@ -440,6 +440,9 @@ func main() {
 	}
 
 	// render RSS/Atom feeds
+	if tmpl, hasTmpl := templates["_default/rss"]; hasTmpl {
+		defaultRssTemplate = tmpl
+	}
 	for dirname, posts := range topLevelPosts {
 		// do not render RSS for leaf paths
 		if hasSubPath(leafIndexPaths, path.Join(contentBase, dirname)+"/") {
@@ -447,8 +450,8 @@ func main() {
 		}
 		tmpl, hasTmpl := templates["top"+dirname+".rss"]
 		if !hasTmpl {
-			if t, hasTmpl := templates["rss"]; dirname == "/" && hasTmpl {
-				tmpl = t
+			if rootTmpl, hasTmpl := templates["rss"]; dirname == "/" && hasTmpl {
+				tmpl = rootTmpl
 			} else {
 				tmpl = defaultRssTemplate
 			}
