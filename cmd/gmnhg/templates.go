@@ -47,7 +47,7 @@ var defaultIndexTemplate = mustParseTmpl("index", `# Site index
 {{- range $dir, $posts := .PostData }}{{ if and (ne $dir "/") (eq (dir $dir) "/") }}
 Index of {{ trimPrefix "/" $dir }}:
 
-{{ range $p := $posts | sortPosts }}=> $p.Link {{ $p.Metadata.PostDate.Format "2006-01-02 15:04" }}{{ with $p.Metadata.PostTitle }} - {{ . }}{{end}}
+{{ range $p := $posts | sortPosts }}=> {{ $p.Link }} {{ $p.Metadata.PostDate.Format "2006-01-02 15:04" }}{{ with $p.Metadata.PostTitle }} - {{ . }}{{end}}
 {{ end }}{{ end }}{{ end }}
 `)
 
