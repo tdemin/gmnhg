@@ -53,11 +53,13 @@ Index of {{ trimPrefix "/" $dir }}:
 
 var defaultRssTemplate = mustParseTmpl("rss", `{{- $Site := .Site -}}
 {{- $Dirname := trimPrefix "/" .Dirname -}}
+{{- $DirLink := list (trimSuffix "/" $Site.GeminiBaseURL) $Dirname | join "/" | html -}}
+{{- $RssLink := list (trimSuffix "/" $Site.GeminiBaseURL) (trimPrefix "/" .Link) | join "/" | html -}}
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>{{ if $Site.Title }}{{ html $Site.Title }}{{ else }}Site feed{{ with $Dirname }} for {{ html . }}{{end}}{{end}}</title>
-    <link>{{ html (list (trimSuffix "/" $Site.GeminiBaseURL) .Link | join "/") }}</link>
+    <link>{{ $DirLink }}</link>
     <description>Recent content{{ with $Dirname }} in {{ html . }}{{end}}{{ with $Site.Title }} on {{ html . }}{{end}}</description>
     <generator>gmnhg</generator>{{ with $Site.LanguageCode }}
     <language>{{ html .}}</language>{{end}}{{ with $Site.Author.email }}
@@ -65,13 +67,14 @@ var defaultRssTemplate = mustParseTmpl("rss", `{{- $Site := .Site -}}
     <webMaster>{{ html . }}{{ with $Site.Author.name }} ({{ html . }}){{end}}</webMaster>{{end}}{{ with $Site.Copyright }}
     <copyright>{{ html . }}</copyright>{{end}}
     <lastBuildDate>{{ now.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</lastBuildDate>
-    {{ printf "<atom:link href=%q rel=\"self\" type=\"application/rss+xml\" />" (html .Link) }}
+    {{ printf "<atom:link href=%q rel=\"self\" type=\"application/rss+xml\" />" $RssLink }}
     {{ range $i, $p := .Posts | sortPosts }}{{ if lt $i 25 }}
+    {{- $AbsURL := list (trimSuffix "/" $Site.GeminiBaseURL) (trimPrefix "/" (regexReplaceAll "/index\\.gmi$" $p.Link "/")) | join "/" | html }}
     <item>
-      <title>{{ if $p.Metadata.PostTitle }}{{ html $p.Metadata.PostTitle }}{{ else }}{{ html $p.Link }}{{end}}</title>
-      <link>{{ html (list (trimSuffix "/" $Site.GeminiBaseURL) (regexReplaceAll "/index\\.gmi$" $p.Link "/") | join "/") }}</link>
+      <title>{{ if $p.Metadata.PostTitle }}{{ html $p.Metadata.PostTitle }}{{ else }}{{ trimPrefix "/" $p.Link | html }}{{end}}</title>
+      <link>{{ $AbsURL }}</link>
       <pubDate>{{ $p.Metadata.PostDate.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</pubDate>
-      <guid>{{ html (list (trimSuffix "/" $Site.GeminiBaseURL) (regexReplaceAll "/index\\.gmi$" $p.Link "/") | join "/") }}</guid>
+      <guid>{{ $AbsURL }}</guid>
       <description>{{ html $p.Metadata.PostSummary }}</description>
     </item>
     {{end}}{{end}}
