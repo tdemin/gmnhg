@@ -330,11 +330,11 @@ func main() {
 				// include normal pages in all subdirectory indices
 				for i, dir := range dirs {
 					if i > 0 {
-						dirs[i] = "/" + dirs[i-1] + "/" + dir
+						dirs[i] = dirs[i-1] + "/" + dir
 					}
 				}
 				for _, dir := range dirs {
-					topLevelPosts[dir] = append(topLevelPosts[dir], p)
+					topLevelPosts["/" + dir] = append(topLevelPosts["/" + dir], p)
 				}
 				topLevelPosts["/"] = append(topLevelPosts["/"], p)
 			}
