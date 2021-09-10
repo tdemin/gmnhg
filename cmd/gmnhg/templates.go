@@ -54,23 +54,23 @@ var defaultRssTemplate = mustParseTmpl("rss", `{{- $Site := .Site -}}
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>{{ if $Site.Title }}{{ $Site.Title }}{{ else }}Site feed{{ with .Dirname }} for {{.}}{{end}}{{end}}</title>
-    <link>{{ $Site.GeminiBaseURL }}{{ .Link }}</link>
-    <description>Recent content{{ with .Dirname }} in {{.}}{{end}}{{ with $Site.Title }} on {{.}}{{end}}</description>
+    <title>{{ if $Site.Title }}{{ html $Site.Title }}{{ else }}Site feed{{ with .Dirname }} for {{ html . }}{{end}}{{end}}</title>
+    <link>{{ html (list (trimSuffix "/" $Site.GeminiBaseURL) .Link | join "/") }}</link>
+    <description>Recent content{{ with .Dirname }} in {{ html . }}{{end}}{{ with $Site.Title }} on {{ html . }}{{end}}</description>
     <generator>gmnhg</generator>{{ with $Site.LanguageCode }}
-    <language>{{.}}</language>{{end}}{{ with $Site.Author.email }}
-    <managingEditor>{{.}}{{ with $Site.Author.name }} ({{.}}){{end}}</managingEditor>
-    <webMaster>{{.}}{{ with $Site.Author.name }} ({{.}}){{end}}</webMaster>{{end}}{{ with $Site.Copyright }}
-    <copyright>{{.}}</copyright>{{end}}
+    <language>{{ html .}}</language>{{end}}{{ with $Site.Author.email }}
+    <managingEditor>{{ html . }}{{ with $Site.Author.name }} ({{ html . }}){{end}}</managingEditor>
+    <webMaster>{{ html . }}{{ with $Site.Author.name }} ({{ html . }}){{end}}</webMaster>{{end}}{{ with $Site.Copyright }}
+    <copyright>{{ html . }}</copyright>{{end}}
     <lastBuildDate>{{ now.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</lastBuildDate>
-    {{ printf "<atom:link href=%q rel=\"self\" type=\"application/rss+xml\" />" .Link }}
+    {{ printf "<atom:link href=%q rel=\"self\" type=\"application/rss+xml\" />" (html .Link) }}
     {{ range $i, $p := .Posts | sortPosts }}{{ if lt $i 25 }}
     <item>
-      <title>{{ if $p.Metadata.PostTitle }}{{ $p.Metadata.PostTitle }}{{ else }}{{ $p.Link }}{{end}}</title>
-      <link>{{ $Site.GeminiBaseURL }}{{ $p.Link }}</link>
+      <title>{{ if $p.Metadata.PostTitle }}{{ html $p.Metadata.PostTitle }}{{ else }}{{ html $p.Link }}{{end}}</title>
+      <link>{{ html (list (trimSuffix "/" $Site.GeminiBaseURL) $p.Link | join "/") }}</link>
       <pubDate>{{ $p.Metadata.PostDate.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</pubDate>
-      <guid>{{ $Site.GeminiBaseURL }}{{ $p.Link }}</guid>
-      <description>{{ $p.Metadata.PostSummary }}</description>
+      <guid>{{ html (list (trimSuffix "/" $Site.GeminiBaseURL) $p.Link | join "/") }}</guid>
+      <description>{{ html $p.Metadata.PostSummary }}</description>
     </item>
     {{end}}{{end}}
   </channel>
