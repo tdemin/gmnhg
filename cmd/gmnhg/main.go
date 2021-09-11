@@ -78,6 +78,26 @@
 // (https://github.com/Masterminds/sprig); see the sprig documentation
 // for more details.
 //
+// RSS will be generated as rss.xml for the root directory and all
+// branch directories. Site title and other RSS metadata will be
+// loaded from the Hugo configuration file (config.toml, config.yaml,
+// or config.json).
+//
+// A new setting, geminiBaseURL, should be added to the Hugo
+// configuration file to ensure that RSS paths are correct. This is
+// more or less the same as Hugo's baseURL, but is separate in case
+// your Gemini site is deployed to a different server.
+//
+// RSS templates can be overriden by defining a template in one of
+// several places:
+//
+// * Site-wide: gmnhg/_default/rss.gotmpl
+//
+// * Site root: gmnhg/rss.gotmpl
+//
+// * Directories: gmnhg/rss/dirname.gotmpl for a directory "/dirname"
+// or gmnhg/rss/dirname/subdir.gotmpl for "/dirname/subdir"
+//
 // One might want to ignore _index.gmi.md files with the following Hugo
 // config option in config.toml:
 //
@@ -448,7 +468,7 @@ func main() {
 		if hasSubPath(leafIndexPaths, path.Join(contentBase, dirname)+"/") {
 			continue
 		}
-		tmpl, hasTmpl := templates["top"+dirname+"_rss"]
+		tmpl, hasTmpl := templates["rss"+dirname]
 		if !hasTmpl {
 			if rootTmpl, hasTmpl := templates["rss"]; dirname == "/" && hasTmpl {
 				tmpl = rootTmpl
