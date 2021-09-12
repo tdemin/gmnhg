@@ -120,13 +120,29 @@ func (r Renderer) blockquote(w io.Writer, node *ast.BlockQuote, entering bool) {
 		if node := node.AsContainer(); node != nil {
 			for _, child := range node.Children {
 				w.Write(quotePrefix)
-				r.blockquoteText(w, child)
+				r.blockquoteChild(w, child)
 				// double linebreak to ensure Gemini clients don't merge
 				// quotes; gomarkdown assumes separate blockquotes are
 				// paragraphs of the same blockquote while we don't
 				w.Write(lineBreak)
 				w.Write(lineBreak)
 			}
+		}
+	}
+}
+
+func (r Renderer) blockquoteChild(w io.Writer, node ast.Node) {
+	if container := node.AsContainer(); container != nil {
+		for _, child := range container.Children {
+			r.blockquoteChild(w, child)
+		}
+	} else {
+		switch node := node.(type) {
+			case *ast.HTMLBlock, *ast.HTMLSpan:
+				fmt.Print("ok")
+				r.blockquoteText(w, &ast.Leaf{Parent: node, Literal: node.AsLeaf().Content, Content: node.AsLeaf().Content})
+			default:
+				r.blockquoteText(w, node)
 		}
 	}
 }
