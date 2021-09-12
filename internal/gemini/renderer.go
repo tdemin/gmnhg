@@ -139,7 +139,6 @@ func (r Renderer) blockquoteChild(w io.Writer, node ast.Node) {
 	} else {
 		switch node := node.(type) {
 			case *ast.HTMLBlock, *ast.HTMLSpan:
-				fmt.Print("ok")
 				r.blockquoteText(w, &ast.Leaf{Parent: node, Literal: node.AsLeaf().Content, Content: node.AsLeaf().Content})
 			default:
 				r.blockquoteText(w, node)
