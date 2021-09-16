@@ -102,17 +102,11 @@
 // config option in config.toml:
 //
 //  ignoreFiles = [ "_index\\.gmi\\.md$" ]
-//
-// Limitations:
-//
-// * For now, the program will only recognize YAML front matter, while
-// Hugo supports it in TOML, YAML, JSON, and org-mode formats.
 package main
 
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -322,11 +316,13 @@ func main() {
 		if err != nil {
 			return err
 		}
-		gemText, metadata, err := gemini.RenderMarkdown(fileContent, gemini.Defaults)
+		content, metadata := gmnhg.ParseMetadata(fileContent)
 		// skip drafts from rendering
-		if errors.Is(err, gemini.ErrPostIsDraft) {
+		if metadata.IsDraft {
 			return nil
-		} else if err != nil {
+		}
+		gemText, err := gemini.RenderMarkdown(content, gemini.Defaults)
+		if err != nil {
 			return err
 		}
 		// skip headless leaves from rendering
@@ -387,7 +383,7 @@ func main() {
 	// render posts to files
 	for fileName, post := range posts {
 		var tmpl = singleTemplate
-		if pl := post.Metadata.PostLayout; pl != "" {
+		if pl := post.Metadata.Layout; pl != "" {
 			t, ok := templates[pl]
 			if !ok {
 				// no point trying to render pages with no layout
@@ -413,15 +409,17 @@ func main() {
 		if !hasTmpl {
 			continue
 		}
-		content, err := ioutil.ReadFile(path.Join(contentBase, dirname, indexMdFilename))
+		fileContent, err := ioutil.ReadFile(path.Join(contentBase, dirname, indexMdFilename))
 		if err != nil {
 			// skip unreadable index files
 			continue
 		}
-		gemtext, _, err := gemini.RenderMarkdown(content, gemini.Defaults)
-		if errors.Is(err, gemini.ErrPostIsDraft) {
+		content, metadata := gmnhg.ParseMetadata(fileContent)
+		if metadata.IsDraft {
 			continue
-		} else if err != nil {
+		}
+		gemtext, err := gemini.RenderMarkdown(content, gemini.Defaults)
+		if err != nil {
 			panic(err)
 		}
 		cnt := map[string]interface{}{
@@ -446,8 +444,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	gemtext, _, err := gemini.RenderMarkdown(indexContent, gemini.Defaults)
-	if err != nil && !errors.Is(err, gemini.ErrPostIsDraft) {
+	content, _ := gmnhg.ParseMetadata(indexContent)
+	gemtext, err := gemini.RenderMarkdown(content, gemini.Defaults)
+	if err != nil {
 		panic(err)
 	}
 	buf := bytes.Buffer{}
