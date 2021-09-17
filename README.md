@@ -13,15 +13,32 @@ simpler.
 [Gemini]: https://gemini.circumlunar.space
 [Gemtext]: https://gemini.circumlunar.space/docs/specification.html
 
-The renderer is somewhat hasty, and is NOT supposed to be able to
-convert the entirety of possible Markdown to Gemtext (as it's not
-possible to do so, considering Gemtext is a lot simpler than Markdown),
-but instead a selected subset of it, enough for conveying your mind in
-Markdown.
-
 The renderer uses the [gomarkdown][gomarkdown] library for parsing
 Markdown. gomarkdown has a few quirks at this time, the most notable one
 being unable to parse links/images inside other links.
+
+At this time, gmnhg can convert these Markdown elements to Gemtext:
+
+* paragraphs, converting them to soft wrap as per Gemini spec p. 5.4.1;
+* inline text formatting (bold, emphasis, strikethrough, code,
+  subscript, superscript), which stays in the text to preserve stylistic
+  context;
+* headings;
+* blockquotes;
+* preformatted blocks;
+* tables, displayed as ASCII preformatted blocks;
+* lists (as Gemini doesn't allow lists of level >= 2, those will be
+  reflected with an extra indentation level): ordered, numbered,
+  definition;
+* links and images, rendered as Gemtext links (inline links are rendered
+  after their parent paragraph or other block element in a links block
+  sorted by element type);
+* footnotes, rendered as paragraphs;
+* horizontal rules.
+
+The renderer will also treat lists of links and paragraphs consisting of
+links only the special way: it will render only the links block for
+them.
 
 [gomarkdown]: https://github.com/gomarkdown/markdown
 
@@ -58,8 +75,9 @@ can be used as a standalone program as well.
 
 ## Site configuration
 
-For RSS feeds to use correct URLs, you should define geminiBaseURL in
-Hugo's configuration file (config.toml, config.yaml, or config.json).
+For RSS feeds to use correct URLs, you should define `geminiBaseURL` in
+Hugo's configuration file (`config.toml`, `config.yaml`, or
+`config.json`).
 
 Other attributes from this file, such as site title, will also be used
 during RSS feed generation if they are defined.
