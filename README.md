@@ -1,6 +1,7 @@
 # Hugo-to-Gemini converter
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/tdemin/gmnhg)](https://pkg.go.dev/github.com/tdemin/gmnhg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/tdemin/gmnhg)](https://goreportcard.com/report/github.com/tdemin/gmnhg)
 [![Push to GHCR](https://github.com/tdemin/gmnhg/actions/workflows/docker.yml/badge.svg)](https://github.com/tdemin/gmnhg/actions/workflows/docker.yml)
 
 This repo holds a converter of Hugo Markdown posts to
