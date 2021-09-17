@@ -140,24 +140,15 @@ func (r Renderer) superscript(w io.Writer, node *ast.Superscript, entering bool)
 	}
 }
 
-const gemtextHeadingLevelLimit = 3
-
 func (r Renderer) heading(w io.Writer, node *ast.Heading, entering bool) {
 	if entering {
-		// pad headings with the relevant number of #-s; Gemini spec allows 3 at
-		// maximum before the space, therefore add one after 3 and keep padding
+		// pad headings with the relevant number of #-s; Gemini spec
+		// used to allow 3 at maximum before a space
 		bufLength := node.Level + 1
-		spaceNeeded := node.Level > gemtextHeadingLevelLimit
-		if spaceNeeded {
-			bufLength++
-		}
 		heading := make([]byte, bufLength)
 		heading[len(heading)-1] = ' '
 		for i := 0; i < len(heading)-1; i++ {
 			heading[i] = '#'
-		}
-		if spaceNeeded {
-			heading[gemtextHeadingLevelLimit] = ' '
 		}
 		w.Write(heading)
 		r.text(w, node)
