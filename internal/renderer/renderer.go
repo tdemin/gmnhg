@@ -97,8 +97,6 @@ func (r Renderer) image(w io.Writer, node *ast.Image, entering bool) {
 }
 
 func (r Renderer) blockquote(w io.Writer, node *ast.BlockQuote, entering bool) {
-	// TODO: Renderer.blockquote: needs support for subnode rendering;
-	// ideally to be merged with paragraph
 	if entering {
 		if node := node.AsContainer(); node != nil {
 			for _, child := range node.Children {
