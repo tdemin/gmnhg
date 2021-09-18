@@ -75,12 +75,26 @@ can be used as a standalone program as well.
 
 ## Site configuration
 
-For RSS feeds to use correct URLs, you should define `geminiBaseURL` in
-Hugo's configuration file (`config.toml`, `config.yaml`, or
-`config.json`).
+gmnhg will pick up some attributes such as site title, base URL, and
+language code from your Hugo configuration file (`config.toml`,
+`config.yaml`, or `config.json`). Presently these are used in the
+default RSS template.
 
-Other attributes from this file, such as site title, will also be used
-during RSS feed generation if they are defined.
+gmnhg provides a way to override these attributes by defining a
+`gmnhg` section in the configuration file and nesting the attributes
+to override underneath this section. Presently you can override both
+`baseUrl` and `title` in this manner.
+
+For example, you could add the following to your `config.toml` to
+override your `baseUrl`:
+
+```
+[gmnhg]
+baseUrl = "gemini://mysite.com"
+```
+
+This is recommended, as it will ensure that RSS links on your Gemini
+site use the correct URL.
 
 ## License
 

@@ -53,8 +53,8 @@ Index of {{ trimPrefix "/" $dir }}:
 
 var defaultRssTemplate = mustParseTmpl("rss", `{{- $Site := .Site -}}
 {{- $Dirname := trimPrefix "/" .Dirname -}}
-{{- $DirLink := list (trimSuffix "/" $Site.GeminiBaseURL) $Dirname | join "/" | html -}}
-{{- $RssLink := list (trimSuffix "/" $Site.GeminiBaseURL) (trimPrefix "/" .Link) | join "/" | html -}}
+{{- $DirLink := list (trimSuffix "/" $Site.BaseURL) $Dirname | join "/" | html -}}
+{{- $RssLink := list (trimSuffix "/" $Site.BaseURL) (trimPrefix "/" .Link) | join "/" | html -}}
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
@@ -69,7 +69,7 @@ var defaultRssTemplate = mustParseTmpl("rss", `{{- $Site := .Site -}}
     <lastBuildDate>{{ now.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</lastBuildDate>
     {{ printf "<atom:link href=%q rel=\"self\" type=\"application/rss+xml\" />" $RssLink }}
     {{ range $i, $p := .Posts | sortPosts }}{{ if lt $i 25 }}
-    {{- $AbsURL := list (trimSuffix "/" $Site.GeminiBaseURL) (trimPrefix "/" $p.Link) | join "/" | html }}
+    {{- $AbsURL := list (trimSuffix "/" $Site.BaseURL) (trimPrefix "/" $p.Link) | join "/" | html }}
     <item>
       <title>{{ if $p.Metadata.Title }}{{ html $p.Metadata.Title }}{{ else }}{{ trimPrefix "/" $p.Link | html }}{{end}}</title>
       <link>{{ $AbsURL }}</link>
