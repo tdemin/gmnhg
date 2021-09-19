@@ -210,14 +210,6 @@ func hasSubPath(paths []string, path string) bool {
 	return false
 }
 
-func ifNotEmptyElse(first string, second string) string {
-	if first != "" {
-		return first
-	} else {
-		return second
-	}
-}
-
 var version = "v0+HEAD"
 
 func main() {
@@ -492,8 +484,10 @@ func main() {
 			}
 		}
 		sc := map[string]interface{}{
-			"BaseURL":      ifNotEmptyElse(siteConf.Gmnhg.BaseURL, siteConf.BaseURL),
-			"Title":        ifNotEmptyElse(siteConf.Gmnhg.Title, siteConf.Title),
+			"BaseURL":      siteConf.BaseURL,
+			"GmnhgBaseURL": siteConf.Gmnhg.BaseURL,
+			"Title":        siteConf.Title,
+			"GmnhgTitle":   siteConf.Gmnhg.Title,
 			"Copyright":    siteConf.Copyright,
 			"LanguageCode": siteConf.LanguageCode,
 		}
