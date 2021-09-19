@@ -496,7 +496,6 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		r.text(w, node)
 		w.Write(lineBreak)
 		w.Write(lineBreak)
-		noNewLine = false
 	case *ast.HTMLSpan:
 		r.text(w, node)
 	}
