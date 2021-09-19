@@ -101,28 +101,13 @@ func (r Renderer) blockquote(w io.Writer, node *ast.BlockQuote, entering bool) {
 		if node := node.AsContainer(); node != nil {
 			for _, child := range node.Children {
 				w.Write(quotePrefix)
-				r.blockquoteChild(w, child)
+				r.blockquoteText(w, child)
 				// double linebreak to ensure Gemini clients don't merge
 				// quotes; gomarkdown assumes separate blockquotes are
 				// paragraphs of the same blockquote while we don't
 				w.Write(lineBreak)
 				w.Write(lineBreak)
 			}
-		}
-	}
-}
-
-func (r Renderer) blockquoteChild(w io.Writer, node ast.Node) {
-	if container := node.AsContainer(); container != nil {
-		for _, child := range container.Children {
-			r.blockquoteChild(w, child)
-		}
-	} else {
-		switch node := node.(type) {
-			case *ast.HTMLBlock, *ast.HTMLSpan:
-				r.blockquoteText(w, &ast.Leaf{Parent: node, Literal: node.AsLeaf().Content, Content: node.AsLeaf().Content})
-			default:
-				r.blockquoteText(w, node)
 		}
 	}
 }
@@ -361,13 +346,18 @@ func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
 	if node, ok := node.(*ast.Link); ok && node.Footnote != nil {
 		fmt.Fprintf(&buf, "[^%d]", node.NoteID)
 	}
-	if node := node.AsLeaf(); node != nil {
+	if leaf := node.AsLeaf(); leaf != nil {
 		// replace all newlines in text with preferred symbols; this may
 		// be spaces for general text, allowing for soft wrapping, which
 		// is recommended as per Gemini spec p. 5.4.1, or line breaks
 		// with a blockquote symbols for blockquotes, or just nothing
 		buf.Write(delimiter)
-		buf.Write(lineBreakCharacters.ReplaceAll(node.Literal, replacement))
+		switch node.(type) {
+		case *ast.HTMLBlock, *ast.HTMLSpan:
+			buf.Write(lineBreakCharacters.ReplaceAll(leaf.Content, replacement))
+		default:
+			buf.Write(lineBreakCharacters.ReplaceAll(leaf.Literal, replacement))
+		}
 		buf.Write(delimiter)
 	}
 	if node := node.AsContainer(); node != nil {
