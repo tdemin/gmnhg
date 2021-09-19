@@ -353,7 +353,7 @@ func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
 		// with a blockquote symbols for blockquotes, or just nothing
 		buf.Write(delimiter)
 		switch node.(type) {
-		case *ast.HTMLBlock, *ast.HTMLSpan:
+		case *ast.HTMLSpan:
 			buf.Write(lineBreakCharacters.ReplaceAll(leaf.Content, replacement))
 		default:
 			buf.Write(lineBreakCharacters.ReplaceAll(leaf.Literal, replacement))
@@ -492,6 +492,13 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		r.table(w, node, entering)
 		noNewLine = false
 		fetchLinks = true
+	case *ast.HTMLBlock:
+		r.text(w, node)
+		w.Write(lineBreak)
+		w.Write(lineBreak)
+		noNewLine = false
+	case *ast.HTMLSpan:
+		r.text(w, node)
 	}
 	if !noNewLine && !entering {
 		w.Write(lineBreak)
