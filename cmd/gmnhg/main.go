@@ -84,10 +84,10 @@
 // or config.json).
 //
 // gmnhg provides a way to override these attributes by defining a
-// `gmnhg` section in the configuration file and nesting the attributes
+// "gmnhg" section in the configuration file and nesting the attributes
 // to override underneath this section. Presently you can override both
-// `baseUrl` and `title` in this manner. It is recommended to override
-// at least `baseUrl` unless your site uses a protocol-relative base
+// "baseUrl" and "title" in this manner. It is recommended to override
+// at least "baseUrl" unless your site uses a protocol-relative base
 // URL (beginning with a double slash instead of https://).
 //
 // RSS templates can be overriden by defining a template in one of
