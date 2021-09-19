@@ -13,8 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with gmnhg. If not, see <https://www.gnu.org/licenses/>.
 
-// md2gmn converts Markdown text files to text/gemini. It panics on
-// invalid input.
+// md2gmn converts Markdown text files to text/gemini.
 package main
 
 import (
@@ -23,6 +22,7 @@ import (
 	"os"
 
 	gemini "github.com/tdemin/gmnhg"
+	"github.com/tdemin/gmnhg/internal/gmnhg"
 )
 
 var version = "v0+HEAD"
@@ -56,7 +56,8 @@ func main() {
 		panic(err)
 	}
 
-	geminiContent, _, err := gemini.RenderMarkdown(text, gemini.WithMetadata)
+	content, _ := gmnhg.ParseMetadata(text)
+	geminiContent, err := gemini.RenderMarkdown(content, gemini.Defaults)
 	if err != nil {
 		panic(err)
 	}

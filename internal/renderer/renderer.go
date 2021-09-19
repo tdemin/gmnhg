@@ -13,9 +13,9 @@
 // You should have received a copy of the GNU General Public License
 // along with gmnhg. If not, see <https://www.gnu.org/licenses/>.
 
-// Package gemini contains an implementation of markdown => text/gemini
+// Package renderer contains an implementation of markdown => text/gemini
 // renderer for github.com/gomarkdown/markdown.
-package gemini
+package renderer
 
 import (
 	"bytes"
@@ -23,7 +23,6 @@ import (
 	"io"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/gomarkdown/markdown/ast"
 	"github.com/olekukonko/tablewriter"
@@ -52,28 +51,12 @@ var (
 // matches a FULL string that contains no non-whitespace characters
 var emptyLineRegex = regexp.MustCompile(`\A[\s]*\z`)
 
-const timestampFormat = "2006-01-02 15:04"
-
-// Metadata provides data necessary for proper post rendering.
-type Metadata interface {
-	Title() string
-	Date() time.Time
-}
-
 // Renderer implements markdown.Renderer.
-type Renderer struct {
-	Metadata Metadata
-}
+type Renderer struct{}
 
 // NewRenderer returns a new Renderer.
 func NewRenderer() Renderer {
 	return Renderer{}
-}
-
-// NewRendererWithMetadata returns a new Renderer initialized with post
-// metadata.
-func NewRendererWithMetadata(m Metadata) Renderer {
-	return Renderer{Metadata: m}
 }
 
 func getNodeDelimiter(node ast.Node) []byte {
@@ -114,8 +97,6 @@ func (r Renderer) image(w io.Writer, node *ast.Image, entering bool) {
 }
 
 func (r Renderer) blockquote(w io.Writer, node *ast.BlockQuote, entering bool) {
-	// TODO: Renderer.blockquote: needs support for subnode rendering;
-	// ideally to be merged with paragraph
 	if entering {
 		if node := node.AsContainer(); node != nil {
 			for _, child := range node.Children {
@@ -174,24 +155,15 @@ func (r Renderer) superscript(w io.Writer, node *ast.Superscript, entering bool)
 	}
 }
 
-const gemtextHeadingLevelLimit = 3
-
 func (r Renderer) heading(w io.Writer, node *ast.Heading, entering bool) {
 	if entering {
-		// pad headings with the relevant number of #-s; Gemini spec allows 3 at
-		// maximum before the space, therefore add one after 3 and keep padding
+		// pad headings with the relevant number of #-s; Gemini spec
+		// used to allow 3 at maximum before a space
 		bufLength := node.Level + 1
-		spaceNeeded := node.Level > gemtextHeadingLevelLimit
-		if spaceNeeded {
-			bufLength++
-		}
 		heading := make([]byte, bufLength)
 		heading[len(heading)-1] = ' '
 		for i := 0; i < len(heading)-1; i++ {
 			heading[i] = '#'
-		}
-		if spaceNeeded {
-			heading[gemtextHeadingLevelLimit] = ' '
 		}
 		w.Write(heading)
 		r.text(w, node)
@@ -543,15 +515,8 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 	return ast.GoToNext
 }
 
-// RenderHeader implements Renderer.RenderHeader(). It renders metadata
-// at the top of the post if any has been provided.
-func (r Renderer) RenderHeader(w io.Writer, node ast.Node) {
-	if r.Metadata != nil {
-		// TODO: Renderer.RenderHeader: check whether date is mandatory
-		// in Hugo
-		w.Write([]byte(fmt.Sprintf("# %s\n\n%s\n\n", r.Metadata.Title(), r.Metadata.Date().Format(timestampFormat))))
-	}
-}
+// RenderHeader implements Renderer.RenderHeader().
+func (r Renderer) RenderHeader(w io.Writer, node ast.Node) {}
 
 // RenderFooter implements Renderer.RenderFooter().
 func (r Renderer) RenderFooter(w io.Writer, node ast.Node) {}
