@@ -35,9 +35,9 @@ func defineFuncMap() template.FuncMap {
 	return fm
 }
 
-var defaultSingleTemplate = mustParseTmpl("single", `# {{ .Metadata.PostTitle }}
+var defaultSingleTemplate = mustParseTmpl("single", `# {{ .Metadata.Title }}
 
-{{ .Metadata.PostDate.Format "2006-01-02 15:04" }}
+{{ .Metadata.Date.Format "2006-01-02 15:04" }}
 
 {{ printf "%s" .Post }}`)
 
@@ -47,35 +47,39 @@ var defaultIndexTemplate = mustParseTmpl("index", `# Site index
 {{- range $dir, $posts := .PostData }}{{ if and (ne $dir "/") (eq (dir $dir) "/") }}
 Index of {{ trimPrefix "/" $dir }}:
 
-{{ range $p := $posts | sortPosts }}=> {{ $p.Link }} {{ $p.Metadata.PostDate.Format "2006-01-02 15:04" }} - {{ if $p.Metadata.PostTitle }}{{ $p.Metadata.PostTitle }}{{else}}{{ $p.Link }}{{end}}
+{{ range $p := $posts | sortPosts }}=> {{ $p.Link }} {{ $p.Metadata.Date.Format "2006-01-02 15:04" }} - {{ if $p.Metadata.Title }}{{ $p.Metadata.Title }}{{else}}{{ $p.Link }}{{end}}
 {{ end }}{{ end }}{{ end }}
 `)
 
 var defaultRssTemplate = mustParseTmpl("rss", `{{- $Site := .Site -}}
-{{- $Dirname := trimPrefix "/" .Dirname -}}
-{{- $DirLink := list (trimSuffix "/" $Site.GeminiBaseURL) $Dirname | join "/" | html -}}
-{{- $RssLink := list (trimSuffix "/" $Site.GeminiBaseURL) (trimPrefix "/" .Link) | join "/" | html -}}
+{{- $SiteTitle := or $Site.GmnhgTitle $Site.Title | html -}}
+{{- $SiteBaseURL := or $Site.GmnhgBaseURL $Site.BaseURL | trimSuffix "/" | html -}}
+{{- $Dirname := .Dirname | trimPrefix "/" | html -}}
+{{- $DirURL := list $SiteBaseURL $Dirname | join "/" | html -}}
+{{- $RssURL := list $SiteBaseURL (trimPrefix "/" .Link) | join "/" | html -}}
+{{- $RssTitle := printf "%s%s" (or $SiteTitle "Site feed") (and $Dirname (printf " - %s" $Dirname)) | html -}}
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>{{ if $Site.Title }}{{ html $Site.Title }}{{ else }}Site feed{{ with $Dirname }} for {{ html . }}{{end}}{{end}}</title>
-    <link>{{ $DirLink }}</link>
-    <description>Recent content{{ with $Dirname }} in {{ html . }}{{end}}{{ with $Site.Title }} on {{ html . }}{{end}}</description>
+    <title>{{ $RssTitle }}</title>
+    <link>{{ $DirURL }}</link>
+    <description>Recent content{{ with $Dirname }} in {{ . }}{{end}}{{ with $SiteTitle }} on {{ . }}{{end}}</description>
     <generator>gmnhg</generator>{{ with $Site.LanguageCode }}
     <language>{{ html .}}</language>{{end}}{{ with $Site.Author.email }}
     <managingEditor>{{ html . }}{{ with $Site.Author.name }} ({{ html . }}){{end}}</managingEditor>
     <webMaster>{{ html . }}{{ with $Site.Author.name }} ({{ html . }}){{end}}</webMaster>{{end}}{{ with $Site.Copyright }}
     <copyright>{{ html . }}</copyright>{{end}}
     <lastBuildDate>{{ now.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</lastBuildDate>
-    {{ printf "<atom:link href=%q rel=\"self\" type=\"application/rss+xml\" />" $RssLink }}
+    {{ printf "<atom:link href=%q rel=\"self\" type=\"application/rss+xml\" />" $RssURL }}
     {{ range $i, $p := .Posts | sortPosts }}{{ if lt $i 25 }}
-    {{- $AbsURL := list (trimSuffix "/" $Site.GeminiBaseURL) (trimPrefix "/" $p.Link) | join "/" | html }}
+    {{- $RelURL := trimPrefix "/" $p.Link | html -}}
+    {{- $AbsURL := list $SiteBaseURL $RelURL | join "/" }}
     <item>
-      <title>{{ if $p.Metadata.PostTitle }}{{ html $p.Metadata.PostTitle }}{{ else }}{{ trimPrefix "/" $p.Link | html }}{{end}}</title>
+      <title>{{ if $p.Metadata.Title }}{{ html $p.Metadata.Title }}{{ else }}{{ $RelURL }}{{end}}</title>
       <link>{{ $AbsURL }}</link>
-      <pubDate>{{ $p.Metadata.PostDate.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</pubDate>
+      <pubDate>{{ $p.Metadata.Date.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</pubDate>
       <guid>{{ $AbsURL }}</guid>
-      <description>{{ html $p.Metadata.PostSummary }}</description>
+      <description>{{ html $p.Metadata.Summary }}</description>
     </item>
     {{end}}{{end}}
   </channel>

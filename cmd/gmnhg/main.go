@@ -83,10 +83,12 @@
 // loaded from the Hugo configuration file (config.toml, config.yaml,
 // or config.json).
 //
-// A new setting, geminiBaseURL, should be added to the Hugo
-// configuration file to ensure that RSS paths are correct. This is
-// more or less the same as Hugo's baseURL, but is separate in case
-// your Gemini site is deployed to a different server.
+// gmnhg provides a way to override these attributes by defining a
+// "gmnhg" section in the configuration file and nesting the attributes
+// to override underneath this section. Presently you can override both
+// "baseUrl" and "title" in this manner. It is recommended to override
+// at least "baseUrl" unless your site uses a protocol-relative base
+// URL (beginning with a double slash instead of https://).
 //
 // RSS templates can be overriden by defining a template in one of
 // several places:
@@ -148,10 +150,16 @@ var (
 var hugoConfigFiles = []string{"config.toml", "config.yaml", "config.json"}
 
 type SiteConfig struct {
-	GeminiBaseURL string `yaml:"geminiBaseURL"`
-	Title         string `yaml:"title"`
-	Copyright     string `yaml:"copyright"`
-	LanguageCode  string `yaml:"languageCode"`
+	BaseURL      string      `yaml:"baseURL"`
+	Title        string      `yaml:"title"`
+	Copyright    string      `yaml:"copyright"`
+	LanguageCode string      `yaml:"languageCode"`
+	Gmnhg        GmnhgConfig `yaml:"gmnhg"`
+}
+
+type GmnhgConfig struct {
+	BaseURL string `yaml:"baseURL"`
+	Title   string `yaml:"title"`
 }
 
 func copyFile(dst, src string) error {
@@ -476,10 +484,12 @@ func main() {
 			}
 		}
 		sc := map[string]interface{}{
-			"GeminiBaseURL": siteConf.GeminiBaseURL,
-			"Title":         siteConf.Title,
-			"Copyright":     siteConf.Copyright,
-			"LanguageCode":  siteConf.LanguageCode,
+			"BaseURL":      siteConf.BaseURL,
+			"GmnhgBaseURL": siteConf.Gmnhg.BaseURL,
+			"Title":        siteConf.Title,
+			"GmnhgTitle":   siteConf.Gmnhg.Title,
+			"Copyright":    siteConf.Copyright,
+			"LanguageCode": siteConf.LanguageCode,
 		}
 		cnt := map[string]interface{}{
 			"Posts":   posts,
