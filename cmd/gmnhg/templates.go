@@ -65,9 +65,9 @@ var defaultRssTemplate = mustParseTmpl("rss", `{{- $Site := .Site -}}
     <link>{{ $DirURL }}</link>
     <description>Recent content{{ with $Dirname }} in {{ . }}{{end}}{{ with $SiteTitle }} on {{ . }}{{end}}</description>
     <generator>gmnhg</generator>{{ with $Site.LanguageCode }}
-    <language>{{ html .}}</language>{{end}}{{ with $Site.Author.email }}
-    <managingEditor>{{ html . }}{{ with $Site.Author.name }} ({{ html . }}){{end}}</managingEditor>
-    <webMaster>{{ html . }}{{ with $Site.Author.name }} ({{ html . }}){{end}}</webMaster>{{end}}{{ with $Site.Copyright }}
+    <language>{{ html .}}</language>{{end}}{{ with $Site.AuthorEmail }}
+    <managingEditor>{{ html . }}{{ with $Site.AuthorName }} ({{ html . }}){{end}}</managingEditor>
+    <webMaster>{{ html . }}{{ with $Site.AuthorName }} ({{ html . }}){{end}}</webMaster>{{end}}{{ with $Site.Copyright }}
     <copyright>{{ html . }}</copyright>{{end}}
     <lastBuildDate>{{ now.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</lastBuildDate>
     {{ printf "<atom:link href=%q rel=\"self\" type=\"application/rss+xml\" />" $RssURL }}

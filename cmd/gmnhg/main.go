@@ -150,16 +150,22 @@ var (
 var hugoConfigFiles = []string{"config.toml", "config.yaml", "config.json"}
 
 type SiteConfig struct {
-	BaseURL      string      `yaml:"baseURL"`
-	Title        string      `yaml:"title"`
-	Copyright    string      `yaml:"copyright"`
-	LanguageCode string      `yaml:"languageCode"`
-	Gmnhg        GmnhgConfig `yaml:"gmnhg"`
+	BaseURL      string       `yaml:"baseURL"`
+	Title        string       `yaml:"title"`
+	Copyright    string       `yaml:"copyright"`
+	LanguageCode string       `yaml:"languageCode"`
+	Author       AuthorConfig `yaml:"author"`
+	Gmnhg        GmnhgConfig  `yaml:"gmnhg"`
 }
 
 type GmnhgConfig struct {
 	BaseURL string `yaml:"baseURL"`
 	Title   string `yaml:"title"`
+}
+
+type AuthorConfig struct {
+	Name  string `yaml:"name"`
+	Email string `yaml:"email"`
 }
 
 func copyFile(dst, src string) error {
@@ -490,6 +496,8 @@ func main() {
 			"GmnhgTitle":   siteConf.Gmnhg.Title,
 			"Copyright":    siteConf.Copyright,
 			"LanguageCode": siteConf.LanguageCode,
+			"AuthorName":	  siteConf.Author.Name,
+			"AuthorEmail":  siteConf.Author.Email,
 		}
 		cnt := map[string]interface{}{
 			"Posts":   posts,
