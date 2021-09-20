@@ -24,6 +24,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/grokify/html-strip-tags-go"
 	"github.com/gomarkdown/markdown/ast"
 	"github.com/olekukonko/tablewriter"
 )
@@ -355,6 +356,8 @@ func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
 		switch node.(type) {
 		case *ast.HTMLSpan:
 			buf.Write(lineBreakCharacters.ReplaceAll(leaf.Content, replacement))
+		case *ast.HTMLBlock:
+			buf.Write(lineBreakCharacters.ReplaceAll([]byte(strip.StripTags(string(leaf.Literal))), replacement))
 		default:
 			buf.Write(lineBreakCharacters.ReplaceAll(leaf.Literal, replacement))
 		}
@@ -445,6 +448,20 @@ func (r Renderer) table(w io.Writer, node *ast.Table, entering bool) {
 	}
 }
 
+func (r Renderer) htmlSpan(w io.Writer, node *ast.HTMLSpan, entering bool) {
+	if entering {
+		r.text(w, node)
+	}
+}
+
+func (r Renderer) htmlBlock(w io.Writer, node *ast.HTMLBlock, entering bool) {
+	if entering {
+		r.text(w, node)
+		w.Write(lineBreak)
+		w.Write(lineBreak)
+	}
+}
+
 // RenderNode implements Renderer.RenderNode().
 func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.WalkStatus {
 	// entering in gomarkdown was made to have elements of type switch
@@ -493,11 +510,9 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		noNewLine = false
 		fetchLinks = true
 	case *ast.HTMLBlock:
-		r.text(w, node)
-		w.Write(lineBreak)
-		w.Write(lineBreak)
+		r.htmlBlock(w, node, entering)
 	case *ast.HTMLSpan:
-		r.text(w, node)
+		r.htmlSpan(w, node, entering)
 	}
 	if !noNewLine && !entering {
 		w.Write(lineBreak)
