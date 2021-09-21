@@ -46,22 +46,29 @@
 //
 // 1. Single pages are given .Post, which contains the entire post
 // rendered, .Metadata, which contains the metadata crawled from it (see
-// HugoMetadata), and .Link, which contains the filename relative to
-// content dir (with .md replaced with .gmi).
+// Metadata in internal/gmnhg/post.go), and .Link, which contains the
+// filename relative to content dir (with .md replaced with .gmi). 
 //
-// 2. Directory index pages are passed .Posts, which is a slice over
-// post metadata crawled (see HugoMetadata), .Dirname, which is
-// directory name relative to content dir, and .Content, which is
-// rendered from directory's _index.gmi.md.
+// 2. Directory index pages, including the top-level index, are passed
+// .Posts, which is a slice over post metadata crawled (see Metadata in
+// internal/gmnhg/post.go), .Dirname, which is the directory name
+// relative to the content dir, .Link, which contains the index filename
+// relative to the content dir (with .md replaced with .gmi), .Content,
+// which is rendered from directory's _index.gmi.md, and .Site, which
+// contains site-level configuration data loaded from the Hugo site's
+// config.toml, config.yaml, or config.json.
+//
+// The following keys are available in the .Site map, listed with their
+// associated Hugo configuration key: .BaseURL (baseUrl), .GmnhgBaseURL,
+// (gmnhg.baseUrl), .Title (title), .GmnhgTitle (gmnhg.title), .Copyright
+// (copyright), and .LanguageCode (languageCode).
 //
 // Directory indices are passed all posts from subdirectories (branch
 // and leaf bundles), with the exception of leaf resource pages. This
 // allows for roll-up indices.
 //
-// 3. The top-level index.gmi is passed with the .PostData map whose
-// keys are top-level content directories names and values are slices
-// over the same post props as specified in 1, and .Content, which is
-// rendered from top-level _index.gmi.md.
+// 3. RSS templates receive the same data as directory index pages, but
+// the filename provided by .Link is rss.xml instead of index.gmi.
 //
 // This program provides some extra template functions on top of sort:
 //
@@ -430,10 +437,20 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		sc := map[string]interface{}{
+			"BaseURL":      siteConf.BaseURL,
+			"GmnhgBaseURL": siteConf.Gmnhg.BaseURL,
+			"Title":        siteConf.Title,
+			"GmnhgTitle":   siteConf.Gmnhg.Title,
+			"Copyright":    siteConf.Copyright,
+			"LanguageCode": siteConf.LanguageCode,
+		}
 		cnt := map[string]interface{}{
 			"Posts":   posts,
 			"Dirname": dirname,
+			"Link":    path.Join(dirname, indexFilename),
 			"Content": gemtext,
+			"Site":    sc,
 		}
 		buf := bytes.Buffer{}
 		if err := tmpl.Execute(&buf, cnt); err != nil {
@@ -457,8 +474,22 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	sc := map[string]interface{}{
+		"BaseURL":      siteConf.BaseURL,
+		"GmnhgBaseURL": siteConf.Gmnhg.BaseURL,
+		"Title":        siteConf.Title,
+		"GmnhgTitle":   siteConf.Gmnhg.Title,
+		"Copyright":    siteConf.Copyright,
+		"LanguageCode": siteConf.LanguageCode,
+	}
+	cnt := map[string]interface{}{
+		"Posts":   topLevelPosts,
+		"Dirname": "/",
+		"Link":    path.Join("/", indexFilename),
+		"Content": gemtext,
+		"Site":    sc,
+	}
 	buf := bytes.Buffer{}
-	cnt := map[string]interface{}{"PostData": topLevelPosts, "Content": gemtext}
 	if err := indexTmpl.Execute(&buf, cnt); err != nil {
 		panic(err)
 	}
