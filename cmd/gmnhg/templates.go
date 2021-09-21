@@ -35,20 +35,22 @@ func defineFuncMap() template.FuncMap {
 	return fm
 }
 
-var defaultSingleTemplate = mustParseTmpl("single", `# {{ .Metadata.Title }}
-
+var defaultSingleTemplate = mustParseTmpl("single", `# {{ or .Metadata.Title (trimPrefix "/" .Link) }}
+{{ if not .Metadata.Date.IsZero }}
 {{ .Metadata.Date.Format "2006-01-02 15:04" }}
-
+{{ end }}
 {{ printf "%s" .Post }}`)
 
-var defaultIndexTemplate = mustParseTmpl("index", `# Site index
+var defaultIndexTemplate = mustParseTmpl("index", `# {{ or .Site.GmnhgTitle (or .Site.Title "Site index") }}
+{{ with .Content }}
+{{ printf "%s" . }}{{- end }}
 
-{{ with .Content }}{{ printf "%s" . -}}{{ end }}
-{{- range $dir, $posts := .PostData }}{{ if and (ne $dir "/") (eq (dir $dir) "/") }}
+{{- range $dir, $posts := .Posts }}{{ if and (ne $dir "/") (eq (dir $dir) "/") }}
 Index of {{ trimPrefix "/" $dir }}:
 
-{{ range $p := $posts | sortPosts }}=> {{ $p.Link }} {{ $p.Metadata.Date.Format "2006-01-02 15:04" }} - {{ if $p.Metadata.Title }}{{ $p.Metadata.Title }}{{else}}{{ $p.Link }}{{end}}
-{{ end }}{{ end }}{{ end }}
+{{ range $p := $posts | sortPosts }}=> {{ $p.Link }} {{ if not $p.Metadata.Date.IsZero }}
+{{- $p.Metadata.Date.Format "2006-01-02 15:04" }} - {{end}}{{ if $p.Metadata.Title }}{{ $p.Metadata.Title }}{{else}}{{ $p.Link }}{{end}}
+{{ end }}{{ end }}{{ end -}}
 `)
 
 var defaultRssTemplate = mustParseTmpl("rss", `{{- $Site := .Site -}}
@@ -65,9 +67,7 @@ var defaultRssTemplate = mustParseTmpl("rss", `{{- $Site := .Site -}}
     <link>{{ $DirURL }}</link>
     <description>Recent content{{ with $Dirname }} in {{ . }}{{end}}{{ with $SiteTitle }} on {{ . }}{{end}}</description>
     <generator>gmnhg</generator>{{ with $Site.LanguageCode }}
-    <language>{{ html .}}</language>{{end}}{{ with $Site.Author.email }}
-    <managingEditor>{{ html . }}{{ with $Site.Author.name }} ({{ html . }}){{end}}</managingEditor>
-    <webMaster>{{ html . }}{{ with $Site.Author.name }} ({{ html . }}){{end}}</webMaster>{{end}}{{ with $Site.Copyright }}
+    <language>{{ html .}}</language>{{end}}{{ with $Site.Copyright }}
     <copyright>{{ html . }}</copyright>{{end}}
     <lastBuildDate>{{ now.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</lastBuildDate>
     {{ printf "<atom:link href=%q rel=\"self\" type=\"application/rss+xml\" />" $RssURL }}

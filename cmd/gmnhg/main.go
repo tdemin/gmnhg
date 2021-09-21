@@ -430,10 +430,20 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		sc := map[string]interface{}{
+			"BaseURL":      siteConf.BaseURL,
+			"GmnhgBaseURL": siteConf.Gmnhg.BaseURL,
+			"Title":        siteConf.Title,
+			"GmnhgTitle":   siteConf.Gmnhg.Title,
+			"Copyright":    siteConf.Copyright,
+			"LanguageCode": siteConf.LanguageCode,
+		}
 		cnt := map[string]interface{}{
 			"Posts":   posts,
 			"Dirname": dirname,
+			"Link":    path.Join(dirname, indexFilename),
 			"Content": gemtext,
+			"Site":    sc,
 		}
 		buf := bytes.Buffer{}
 		if err := tmpl.Execute(&buf, cnt); err != nil {
@@ -457,8 +467,22 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	sc := map[string]interface{}{
+		"BaseURL":      siteConf.BaseURL,
+		"GmnhgBaseURL": siteConf.Gmnhg.BaseURL,
+		"Title":        siteConf.Title,
+		"GmnhgTitle":   siteConf.Gmnhg.Title,
+		"Copyright":    siteConf.Copyright,
+		"LanguageCode": siteConf.LanguageCode,
+	}
+	cnt := map[string]interface{}{
+		"Posts":   topLevelPosts,
+		"Dirname": "/",
+		"Link":    path.Join("/", indexFilename),
+		"Content": gemtext,
+		"Site":    sc,
+	}
 	buf := bytes.Buffer{}
-	cnt := map[string]interface{}{"PostData": topLevelPosts, "Content": gemtext}
 	if err := indexTmpl.Execute(&buf, cnt); err != nil {
 		panic(err)
 	}
