@@ -35,11 +35,11 @@ func defineFuncMap() template.FuncMap {
 	return fm
 }
 
-var defaultSingleTemplate = mustParseTmpl("single", `# {{ or .Metadata.Title (trimPrefix "/" .Link) }}
-{{ if not .Metadata.Date.IsZero }}
-{{ .Metadata.Date.Format "2006-01-02 15:04" }}
-{{ end }}
-{{ printf "%s" .Post }}`)
+var defaultSingleTemplate = mustParseTmpl("single", `{{ with .Metadata.Title }}# {{.}}
+
+{{ end }}{{ if not .Metadata.Date.IsZero }}{{ .Metadata.Date.Format "2006-01-02 15:04" }}
+
+{{ end }}{{ printf "%s" .Post }}`)
 
 var defaultIndexTemplate = mustParseTmpl("index", `# {{ or .Site.GmnhgTitle (or .Site.Title "Site index") }}
 {{ with .Content }}
