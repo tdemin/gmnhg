@@ -22,10 +22,9 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-	"strings"
 
-	"github.com/grokify/html-strip-tags-go"
 	"github.com/gomarkdown/markdown/ast"
+	"github.com/grokify/html-strip-tags-go"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -51,6 +50,21 @@ var (
 
 // matches a FULL string that contains no non-whitespace characters
 var emptyLineRegex = regexp.MustCompile(`\A[\s]*\z`)
+
+// fairly tolerant to handle weird HTML
+var tagPairRegexString = `<[\n\f ]*%s([\n\f ]+[^\n\f \/>"'=]+[\n\f ]*(=[\n\f ]*([a-zA-Z1-9\-]+|"[^\n\f"]+"|'[^\n\f']+'))?)*[\n\f ]*>.*?<[\n\f ]*/[\n\f ]*%s[\n\f ]*>`
+
+// HTML block tags whose contents should not be rendered
+var htmlNoRenderRegex = []*regexp.Regexp{
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "fieldset", "fieldset")),
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "form", "form")),
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "iframe", "iframe")),
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "script", "script")),
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "style", "style")),
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "canvas", "canvas")),
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "dialog", "dialog")),
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "progress", "progress")),
+}
 
 // Renderer implements markdown.Renderer.
 type Renderer struct{}
@@ -126,7 +140,7 @@ func (r Renderer) subscript(w io.Writer, node *ast.Subscript, entering bool) {
 	if entering {
 		if node := node.AsLeaf(); node != nil {
 			w.Write(subOpen)
-			w.Write([]byte(strings.ReplaceAll(string(node.Literal), "\n", " ")))
+			w.Write(bytes.ReplaceAll(node.Literal, lineBreak, space))
 			w.Write(subClose)
 		}
 	}
@@ -135,7 +149,7 @@ func (r Renderer) superscript(w io.Writer, node *ast.Superscript, entering bool)
 	if entering {
 		if node := node.AsLeaf(); node != nil {
 			w.Write(supOpen)
-			w.Write([]byte(strings.ReplaceAll(string(node.Literal), "\n", " ")))
+			w.Write(bytes.ReplaceAll(node.Literal, lineBreak, space))
 			w.Write(supClose)
 		}
 	}
@@ -339,6 +353,7 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 }
 
 var lineBreakCharacters = regexp.MustCompile(`[\n\r]+`)
+var hardBreakTag = regexp.MustCompile(`< *br */? *>`)
 
 func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
 	buf := bytes.Buffer{}
@@ -354,10 +369,10 @@ func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
 		// with a blockquote symbols for blockquotes, or just nothing
 		buf.Write(delimiter)
 		switch node.(type) {
+		case *ast.Hardbreak:
+			buf.Write(lineBreak)
 		case *ast.HTMLSpan:
-			buf.Write(lineBreakCharacters.ReplaceAll(leaf.Content, replacement))
-		case *ast.HTMLBlock:
-			buf.Write(lineBreakCharacters.ReplaceAll([]byte(strip.StripTags(string(leaf.Literal))), replacement))
+			buf.Write(leaf.Content)
 		default:
 			buf.Write(lineBreakCharacters.ReplaceAll(leaf.Literal, replacement))
 		}
@@ -448,17 +463,19 @@ func (r Renderer) table(w io.Writer, node *ast.Table, entering bool) {
 	}
 }
 
-func (r Renderer) htmlSpan(w io.Writer, node *ast.HTMLSpan, entering bool) {
-	if entering {
-		r.text(w, node)
-	}
-}
-
 func (r Renderer) htmlBlock(w io.Writer, node *ast.HTMLBlock, entering bool) {
 	if entering {
-		r.text(w, node)
-		w.Write(lineBreak)
-		w.Write(lineBreak)
+		// Only render contents of allowed tags
+		literal := node.Literal
+		for _, re := range htmlNoRenderRegex {
+			literal = re.ReplaceAllLiteral(literal, []byte(""))
+		}
+		if len(literal) > 0 {
+			literalWithBreaks := hardBreakTag.ReplaceAll(lineBreakCharacters.ReplaceAll(literal, space), lineBreak)
+			w.Write([]byte(strip.StripTags(string(literalWithBreaks))))
+			w.Write(lineBreak)
+			w.Write(lineBreak)
+		}
 	}
 }
 
@@ -511,8 +528,6 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		fetchLinks = true
 	case *ast.HTMLBlock:
 		r.htmlBlock(w, node, entering)
-	case *ast.HTMLSpan:
-		r.htmlSpan(w, node, entering)
 	}
 	if !noNewLine && !entering {
 		w.Write(lineBreak)
