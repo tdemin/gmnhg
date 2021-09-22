@@ -294,6 +294,8 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 				switch child := child.(type) {
 				case *ast.Text, *ast.Code, *ast.Emph, *ast.Strong, *ast.Del, *ast.Link, *ast.Image:
 					r.text(w, child)
+				case *ast.Hardbreak:
+					w.Write(lineBreak)
 				case *ast.Subscript:
 					r.subscript(w, child, true)
 				case *ast.Superscript:
@@ -371,6 +373,11 @@ func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
 		switch node.(type) {
 		case *ast.Hardbreak:
 			buf.Write(lineBreak)
+			// If the blockquote ends with a double space, the parser will
+			// not create a Hardbreak at the end, so this works.
+			if _, ok := leaf.Parent.(*ast.BlockQuote); !ok {
+				buf.Write(quotePrefix)
+			}
 		case *ast.HTMLSpan:
 			buf.Write(leaf.Content)
 		default:
