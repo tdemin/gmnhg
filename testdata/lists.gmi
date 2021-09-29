@@ -1,0 +1,47 @@
+# Lists
+
+Definition lists, numbered and ordered lists are all supported in gmnhg.
+
+## Definition lists
+
+The lists of definitions get converted into regular unordered lists, prefixed with a star (`*`) as specified by Gemini spec p. 5.5.2.
+
+gmnhg
+* a program to generate a Gemini site from an existing Hugo site
+* a library converting Markdown to Gemtext, based on gomarkdown
+
+md2gmn
+* a program to convert Markdown to Gemtext
+* a wrapper to the gmnhg library
+
+## Normal lists
+
+* This is the first item of an unordered list.
+* This is its second item.
+* This is a list item that was using the `+` sign. Gemini readers should see this item as the continuation of the previous list.
+
+1. This is an ordered list first item.
+2. This is the second item.
+
+## Lists containing a sub-list
+
+As there's no indented list line type in Gemtext, gmnhg will indent these with tabs. The tabs number is equivalent to list level minus one (e.g. single tab for second list level).
+
+Unordered lists can be children of ordered lists, and vice versa.
+
+* This item contains a child ordered list.
+	1. This ordered list item should get picked up as regular text.
+	2. Whether or not this looks nicely depends on the client.
+* This item contains a child definition list.
+	Markdown
+	* an overly complex text markup format invented in 2004 whose sole specification of CommonMark lacks both tables and footnotes
+	* a text format that has zero parsers completely compatible between each other.
+
+1. This item contains a child unordered list.
+	* This whole list should get treated as plain text by clients.
+
+## Links of lists
+
+A special case of lists consisting solely of links to something is documented in the links test document.
+
+=> links.md links test document

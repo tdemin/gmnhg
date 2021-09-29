@@ -40,6 +40,9 @@ The renderer will also treat lists of links and paragraphs consisting of
 links only the special way: it will render only the links block for
 them.
 
+To get a better idea of how source Markdown looks like after the
+conversion to Gemtext, see [testdata](testdata) directory.
+
 [gomarkdown]: https://github.com/gomarkdown/markdown
 
 ## gmnhg
