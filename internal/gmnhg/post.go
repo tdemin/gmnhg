@@ -62,7 +62,7 @@ var (
 	yamlDelimiter   = []byte("---\n")
 	tomlDelimiter   = []byte("+++\n")
 	jsonObjectRegex = regexp.MustCompile(`\A(\{[\s\S]*\})\n\n`)
-	orgModeRegex    = regexp.MustCompile(`\A((?:#\+\w+: ?\S*\n)*)`)
+	orgModeRegex    = regexp.MustCompile(`\A((?:#\+\w+\[?\]?: ?[^\n\r]*\n)+)`)
 )
 
 // ParseMetadata extracts TOML/JSON/YAML/org-mode format front matter
@@ -109,7 +109,7 @@ func ParseMetadata(source []byte) (markdown []byte, metadata Metadata) {
 		if err := json.Unmarshal(metadataContent, &metadata); err != nil {
 			return
 		}
-		markdown = source[blockEnd+1:] // JSON end + \n\n - 1
+		markdown = source[blockEnd:]
 	} else if match := orgModeRegex.FindIndex(source); match != nil {
 		blockEnd = match[1]
 		metadataContent = source[:blockEnd]
