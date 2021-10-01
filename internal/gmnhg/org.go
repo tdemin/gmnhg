@@ -17,6 +17,7 @@ package gmnhg
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -48,6 +49,8 @@ func parseValue(value interface{}) interface{} {
 	return value
 }
 
+var errKeyNotFound = errors.New("cannot find tagged key in struct")
+
 // for key "key" will set either map key "key" or struct field tagged
 // `tag:"key"` with value; expects a pointer
 func reflectSetKey(mapOrStruct interface{}, tag, key string, value interface{}) (err error) {
@@ -75,7 +78,7 @@ func reflectSetKey(mapOrStruct interface{}, tag, key string, value interface{}) 
 			fieldName = field.Name
 		}
 		if fieldName == "" {
-			return fmt.Errorf("cannot find tag %v with key %v in struct", tag, key)
+			return fmt.Errorf("%v: %v %w", tag, key, errKeyNotFound)
 		}
 		v.FieldByName(fieldName).Set(reflect.ValueOf(parseValue(value)))
 	default:
@@ -103,7 +106,7 @@ func unmarshalORG(data []byte, p interface{}) (err error) {
 		} else if k == "date" {
 			value = parseORGDate(v)
 		}
-		if err := reflectSetKey(p, "org", strings.ToLower(key), value); err != nil {
+		if err := reflectSetKey(p, "org", strings.ToLower(key), value); err != nil && !errors.Is(err, errKeyNotFound) {
 			return err
 		}
 	}
