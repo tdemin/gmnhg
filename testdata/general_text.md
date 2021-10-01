@@ -92,14 +92,43 @@ your client handles that.
 
 ###### Heading 6
 
-## Misc
+## HTML
 
 Inline HTML is <span class="bold">currently</span> stripped, but HTML
 contents remain on-screen. This may change in the future.
 
-> There's currently a [bug in gmnhg][bug] which prevents it from
-> stripping HTML in certain scenarios. HTML is noticeably still present
+<p>HTML tags are stripped from HTML blocks. (Note that HTML blocks must
+begin and end with a supported HTML block tag, and must have blank
+lines before and after the block.)</p>
+
+<fieldset>Fieldset blocks are not rendered.</fieldset>
+
+<form>Form blocks are not rendered.</form>
+
+<iframe>Iframe blocks are not rendered.</iframe>
+
+<script>Script blocks are not rendered.</script>
+
+<style>Style blocks are not rendered.</style>
+
+<canvas>Canvas blocks are not rendered.</canvas>
+
+<dialog>Dialog blocks are not rendered.</dialog>
+
+<progress>Progress blocks are not rendered.</progress>
+
+Note that the contents of "forbidden" tags will be rendered if they are
+placed <script>inline</script>, although the tags themselves will be
+stripped. Placing HTML block elements inline in this manner violates
+the spec of common Markdown flavors, but gmnhg handles it the best it
+can.
+
+> HTML spans are <em>stripped</em> from
 > inside <span>blockquotes</span>.
+
+> <p>HTML blocks are stripped from inside blockquotes, but currently they prevent the parser from seeing the blockquote.</p>
+
+## Misc
 
 ***
 

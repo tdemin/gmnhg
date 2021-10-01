@@ -80,15 +80,20 @@ Since clients like Lagrange treat the fourth and the rest of #-s as heading cont
 
 ###### Heading 6
 
-## Misc
+## HTML
 
 Inline HTML is currently stripped, but HTML contents remain on-screen. This may change in the future.
 
-> There's currently a bug in gmnhg which prevents it from
-> stripping HTML in certain scenarios. HTML is noticeably still present
-> inside <span>blockquotes</span>.
+HTML tags are stripped from HTML blocks. (Note that HTML blocks must begin and end with a supported HTML block tag, and must have blank lines before and after the block.)
 
-=> https://github.com/tdemin/gmnhg/issues/6 bug in gmnhg
+Note that the contents of "forbidden" tags will be rendered if they are placed inline, although the tags themselves will be stripped. Placing HTML block elements inline in this manner violates the spec of common Markdown flavors, but gmnhg handles it the best it can.
+
+> HTML spans are stripped from
+> inside blockquotes.
+
+> HTML blocks are stripped from inside blockquotes, but currently they prevent the parser from seeing the blockquote.
+
+## Misc
 
 ---
 
