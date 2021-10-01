@@ -83,22 +83,41 @@ Since clients like Lagrange treat the fourth and the rest of #-s as heading cont
 
 ## HTML
 
-Inline HTML is currently stripped, but HTML contents remain on-screen. This may change in the future.
-Hard breaks using <br> are supported. HTML tags can be escaped using \ or enclosed with ``.
-
-HTML escaped characters like & and < are unescaped. Escaping them with a leading backslash is possible: &amp;, &lt;. Any `&lt; escaped characters inside a code span` will not be unescaped.
+Inline HTML is currently stripped, but HTML contents remain on-screen. This may change in the future. HTML tags can be escaped with \ as in <span></span> or enclosed with ``.
 
 HTML tags are stripped from HTML blocks. (Note that HTML blocks must begin and end with a supported HTML block tag, and must have blank lines before and after the block.)
 
+### Break tags
+
+Hard breaks
+using <br> are supported.
+
 Hard breaks using <br> are supported
-inside HTML blocks. Escaping tags with \ or `` is not possible inside HTML blocks. HTML escaped characters will be unescaped.
+inside HTML blocks.
+
+### HTML entities
+
+HTML escaped entities like & and < are unescaped, even when they show up inside an inline HTML section. Escaping them with a leading backslash is possible outside of HTML blocks: &amp;, &lt;. Any escaped characters inside a code span (such as `&lt; or &gt;`) will not be unescaped.
+
+HTML escaped entities like < and > are also unescaped inside HTML blocks. Backslash escapes have no effect: \&.
+
+### Forbidden tags
+
+Tags that are unable to output Gemini-compatible text are completely removed from the output.
 
 Note that the contents of "forbidden" tags will be rendered if they are placed inline, although the tags themselves will be stripped. Placing HTML block elements inline in this manner violates the spec of common Markdown flavors, but gmnhg handles it the best it can.
+
+### HTML in blockquotes
 
 > HTML spans are stripped from
 > inside blockquotes.
 
+> Non HTML block text before the block.
 > HTML blocks are stripped from inside blockquotes.
+> Non HTML block text after the block.
+
+> Standalone blockquoted HTML blocks
+> are also stripped of their tags.
 
 ## Misc
 

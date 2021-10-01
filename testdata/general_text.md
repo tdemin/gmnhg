@@ -96,21 +96,34 @@ your client handles that.
 ## HTML
 
 Inline HTML is <span class="bold">currently</span> stripped, but HTML
-contents remain on-screen. This may change in the future.<br>Hard breaks
-using \<br> are supported. HTML tags can be escaped using \ or enclosed
-with ``.
+contents remain on-screen. This may change in the future. HTML tags
+can be escaped with \ as in \<span>\</span> or enclosed with \`\`.
 
-HTML escaped characters like &amp; and &lt; are unescaped. Escaping
-them with a leading backslash is possible: \&amp;, \&lt;. Any `&lt;
-escaped characters inside a code span` will not be unescaped.
+<p>HTML tags are stripped from HTML blocks. (Note that HTML blocks
+must begin and end with a <em>supported</em> HTML block tag, and must
+have blank lines before and after the block.)</p>
 
-<p>HTML tags are stripped from HTML blocks. (Note that HTML blocks must
-begin and end with a supported HTML block tag, and must have blank
-lines before and after the block.)</p>
+### Break tags
 
-<p>Hard breaks using &lt;br&gt; are supported<br>inside HTML blocks.
-Escaping tags with \ or `` is not possible inside HTML blocks. HTML
-escaped characters will be unescaped.</p>
+Hard breaks<br>using \<br> are supported. 
+
+<p>Hard breaks using &lt;br&gt; are supported<br>inside HTML blocks.</p>
+
+### HTML entities
+
+HTML escaped entities like &amp; and <span>&lt;</span> are unescaped,
+even when they show up inside an inline HTML section. Escaping
+them with a leading backslash is possible outside of HTML blocks:
+\&amp;, \&lt;. Any escaped characters inside a code span (such as `&lt;
+or &gt;`) will not be unescaped.
+
+<p>HTML escaped entities like &lt; and &gt; are also unescaped
+inside HTML blocks. Backslash escapes have no effect: \&amp;.</p>
+
+### Forbidden tags
+
+Tags that are unable to output Gemini-compatible text are completely
+removed from the output.
 
 <fieldset>Fieldset blocks are not rendered.</fieldset>
 
@@ -134,10 +147,16 @@ stripped. Placing HTML block elements inline in this manner violates
 the spec of common Markdown flavors, but gmnhg handles it the best it
 can.
 
+### HTML in blockquotes
+
 > HTML spans are <em>stripped</em> from
 > inside <span>blockquotes</span>.
 
+> Non HTML block text before the block.
 > <p>HTML blocks are stripped from inside blockquotes.</p>
+> Non HTML block text after the block.
+
+> <p>Standalone blockquoted HTML blocks<br>are also stripped of their tags.</p>
 
 ## Misc
 

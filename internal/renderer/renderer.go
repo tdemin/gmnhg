@@ -378,7 +378,7 @@ func textWithNewlineReplacement(node ast.Node, replacement []byte, unescapeHtml 
 		// is recommended as per Gemini spec p. 5.4.1, or line breaks
 		// with a blockquote symbols for blockquotes, or just nothing
 		buf.Write(delimiter)
-		switch node.(type) {
+		switch node := node.(type) {
 		case *ast.Hardbreak:
 			buf.Write(lineBreak)
 			// If the blockquote ends with a double space, the parser will
@@ -391,6 +391,8 @@ func textWithNewlineReplacement(node ast.Node, replacement []byte, unescapeHtml 
 				buf.Write(lineBreak)
 			}
 			buf.Write(leaf.Content)
+		case *ast.HTMLBlock:
+			buf.Write([]byte(extractHtml(node, quotePrefix)))
 		default:
 			textWithoutBreaks := lineBreakCharacters.ReplaceAll(leaf.Literal, replacement)
 			if unescapeHtml {
@@ -427,6 +429,20 @@ func (r Renderer) blockquoteText(w io.Writer, node ast.Node) {
 
 func extractText(node ast.Node) string {
 	return string(textWithNewlineReplacement(node, space, true))
+}
+
+func extractHtml(node *ast.HTMLBlock, linePrefix []byte) string {
+	// Only render contents of allowed tags
+	literal := node.Literal
+	for _, re := range htmlNoRenderRegex {
+		literal = re.ReplaceAllLiteral(literal, []byte{})
+	}
+	if len(literal) > 0 {
+		literalWithBreaks := hardBreakTag.ReplaceAll(lineBreakCharacters.ReplaceAll(literal, space), append([]byte(lineBreak), linePrefix...))
+		literalStripped := strip.StripTags(string(literalWithBreaks))
+		return html.UnescapeString(literalStripped)
+	}
+	return ""
 }
 
 func (r Renderer) tableHead(t *tablewriter.Table, node *ast.TableHeader) {
@@ -489,15 +505,9 @@ func (r Renderer) table(w io.Writer, node *ast.Table, entering bool) {
 
 func (r Renderer) htmlBlock(w io.Writer, node *ast.HTMLBlock, entering bool) {
 	if entering {
-		// Only render contents of allowed tags
-		literal := node.Literal
-		for _, re := range htmlNoRenderRegex {
-			literal = re.ReplaceAllLiteral(literal, []byte(""))
-		}
-		if len(literal) > 0 {
-			literalWithBreaks := hardBreakTag.ReplaceAll(lineBreakCharacters.ReplaceAll(literal, space), lineBreak)
-			literalStripped := strip.StripTags(string(literalWithBreaks))
-			w.Write([]byte(html.UnescapeString(literalStripped)))
+		htmlString := extractHtml(node, []byte{})
+		if len(htmlString) > 0 {
+			w.Write([]byte(htmlString))
 			w.Write(lineBreak)
 			w.Write(lineBreak)
 		}
@@ -552,7 +562,10 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		noNewLine = false
 		fetchLinks = true
 	case *ast.HTMLBlock:
-		r.htmlBlock(w, node, entering)
+		// Do not render if already rendered as part of a blockquote
+		if _, ok := node.Parent.(*ast.BlockQuote); !ok {
+			r.htmlBlock(w, node, entering)
+		}
 	}
 	if !noNewLine && !entering {
 		w.Write(lineBreak)
