@@ -10,6 +10,9 @@ Inline formatting bits (like this **bold** text, _emphasized_ text,
 ~~strikethrough~~ text, `preformatted text`) are kept to make sure
 Gemini readers still have the stylistic context of your text.
 
+Adding two spaces at the end of a line will insert a hard  
+break. Hard breaks at the end of a paragraph are ignored.  
+
 ## Blockquotes
 
 Newlines in blockquote paragraphs, unlike usual paragraphs, aren't
@@ -27,6 +30,9 @@ to the quote, or using blockquotes to write poems.
 > the author of this program."
 >
 > — also Timur Demin, in the process of writing this test file
+
+> Hard breaks are also supported in blockquotes,  
+> for compatibility. Hard breaks at the end of a blockquote are ignored.  
 
 ## Code
 
