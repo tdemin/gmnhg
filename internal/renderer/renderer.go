@@ -69,6 +69,7 @@ var htmlNoRenderRegex = []*regexp.Regexp{
 
 var lineBreakCharacters = regexp.MustCompile(`[\n\r]+`)
 var hardBreakTag = regexp.MustCompile(`< *br */? *>`)
+var escapedHtmlChar = regexp.MustCompile(`(?:^|[^\\\\])&[[:alnum:]]+;`)
 
 // Renderer implements markdown.Renderer.
 type Renderer struct{}
@@ -101,7 +102,7 @@ func (r Renderer) link(w io.Writer, node *ast.Link, entering bool) {
 			w.Write(linkPrefix)
 			w.Write(node.Destination)
 			w.Write(space)
-			r.text(w, node)
+			r.text(w, node, true)
 		}
 	}
 }
@@ -111,7 +112,7 @@ func (r Renderer) image(w io.Writer, node *ast.Image, entering bool) {
 		w.Write(linkPrefix)
 		w.Write(node.Destination)
 		w.Write(space)
-		r.text(w, node)
+		r.text(w, node, true)
 	}
 }
 
@@ -170,7 +171,7 @@ func (r Renderer) heading(w io.Writer, node *ast.Heading, entering bool) {
 			heading[i] = '#'
 		}
 		w.Write(heading)
-		r.text(w, node)
+		r.text(w, node, true)
 	} else {
 		w.Write(lineBreak)
 	}
@@ -296,8 +297,10 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 				// only render links text in the paragraph if they're
 				// combined with some other text on page
 				switch child := child.(type) {
-				case *ast.Text, *ast.Code, *ast.Emph, *ast.Strong, *ast.Del, *ast.Link, *ast.Image:
-					r.text(w, child)
+				case *ast.Text, *ast.Emph, *ast.Strong, *ast.Del, *ast.Link, *ast.Image:
+					r.text(w, child, true)
+				case *ast.Code:
+					r.text(w, child, false)
 				case *ast.Hardbreak:
 					w.Write(lineBreak)
 				case *ast.HTMLSpan:
@@ -351,7 +354,7 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 			} else if !isTerm {
 				w.Write(itemPrefix)
 			}
-			r.text(w, item)
+			r.text(w, item, true)
 			w.Write(lineBreak)
 			if l >= 2 {
 				if list, ok := item.Children[1].(*ast.List); ok {
@@ -362,7 +365,7 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 	}
 }
 
-func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
+func textWithNewlineReplacement(node ast.Node, replacement []byte, unescapeHtml bool) []byte {
 	buf := bytes.Buffer{}
 	delimiter := getNodeDelimiter(node)
 	// special case for footnotes: we want them in the text
@@ -389,7 +392,13 @@ func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
 			}
 			buf.Write(leaf.Content)
 		default:
-			buf.Write(lineBreakCharacters.ReplaceAll(leaf.Literal, replacement))
+			textWithoutBreaks := lineBreakCharacters.ReplaceAll(leaf.Literal, replacement)
+			if unescapeHtml {
+				unescapedText := escapedHtmlChar.ReplaceAll(textWithoutBreaks, []byte(html.UnescapeString(string(textWithoutBreaks))))
+				buf.Write(unescapedText)
+			} else {
+				buf.Write(textWithoutBreaks)
+			}
 		}
 		buf.Write(delimiter)
 	}
@@ -400,7 +409,7 @@ func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
 			switch child := child.(type) {
 			case *ast.List:
 			default:
-				buf.Write(textWithNewlineReplacement(child, replacement))
+				buf.Write(textWithNewlineReplacement(child, replacement, unescapeHtml))
 			}
 		}
 		buf.Write(delimiter)
@@ -408,16 +417,16 @@ func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
 	return buf.Bytes()
 }
 
-func (r Renderer) text(w io.Writer, node ast.Node) {
-	w.Write(textWithNewlineReplacement(node, space))
+func (r Renderer) text(w io.Writer, node ast.Node, unescapeHtml bool) {
+	w.Write(textWithNewlineReplacement(node, space, unescapeHtml))
 }
 
 func (r Renderer) blockquoteText(w io.Writer, node ast.Node) {
-	w.Write(textWithNewlineReplacement(node, quoteBrPrefix))
+	w.Write(textWithNewlineReplacement(node, quoteBrPrefix, true))
 }
 
 func extractText(node ast.Node) string {
-	return string(textWithNewlineReplacement(node, space))
+	return string(textWithNewlineReplacement(node, space, true))
 }
 
 func (r Renderer) tableHead(t *tablewriter.Table, node *ast.TableHeader) {

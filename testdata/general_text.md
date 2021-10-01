@@ -100,6 +100,10 @@ contents remain on-screen. This may change in the future.<br>Hard breaks
 using \<br> are supported. HTML tags can be escaped using \ or enclosed
 with ``.
 
+HTML escaped characters like &amp; and &lt; are unescaped. Escaping
+them with a leading backslash is possible: \&amp;, \&lt;. Any `&lt;
+escaped characters inside a code span` will not be unescaped.
+
 <p>HTML tags are stripped from HTML blocks. (Note that HTML blocks must
 begin and end with a supported HTML block tag, and must have blank
 lines before and after the block.)</p>
