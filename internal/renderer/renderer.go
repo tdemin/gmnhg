@@ -20,6 +20,7 @@ package renderer
 import (
 	"bytes"
 	"fmt"
+	"html"
 	"io"
 	"regexp"
 
@@ -65,6 +66,9 @@ var htmlNoRenderRegex = []*regexp.Regexp{
 	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "dialog", "dialog")),
 	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "progress", "progress")),
 }
+
+var lineBreakCharacters = regexp.MustCompile(`[\n\r]+`)
+var hardBreakTag = regexp.MustCompile(`< *br */? *>`)
 
 // Renderer implements markdown.Renderer.
 type Renderer struct{}
@@ -296,6 +300,10 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 					r.text(w, child)
 				case *ast.Hardbreak:
 					w.Write(lineBreak)
+				case *ast.HTMLSpan:
+					if hardBreakTag.Match(child.AsLeaf().Literal) {
+						w.Write(lineBreak)
+					}
 				case *ast.Subscript:
 					r.subscript(w, child, true)
 				case *ast.Superscript:
@@ -354,9 +362,6 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 	}
 }
 
-var lineBreakCharacters = regexp.MustCompile(`[\n\r]+`)
-var hardBreakTag = regexp.MustCompile(`< *br */? *>`)
-
 func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
 	buf := bytes.Buffer{}
 	delimiter := getNodeDelimiter(node)
@@ -379,6 +384,9 @@ func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
 				buf.Write(quotePrefix)
 			}
 		case *ast.HTMLSpan:
+			if hardBreakTag.Match(leaf.Literal) {
+				buf.Write(lineBreak)
+			}
 			buf.Write(leaf.Content)
 		default:
 			buf.Write(lineBreakCharacters.ReplaceAll(leaf.Literal, replacement))
@@ -479,7 +487,8 @@ func (r Renderer) htmlBlock(w io.Writer, node *ast.HTMLBlock, entering bool) {
 		}
 		if len(literal) > 0 {
 			literalWithBreaks := hardBreakTag.ReplaceAll(lineBreakCharacters.ReplaceAll(literal, space), lineBreak)
-			w.Write([]byte(strip.StripTags(string(literalWithBreaks))))
+			literalStripped := strip.StripTags(string(literalWithBreaks))
+			w.Write([]byte(html.UnescapeString(literalStripped)))
 			w.Write(lineBreak)
 			w.Write(lineBreak)
 		}

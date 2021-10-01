@@ -11,7 +11,8 @@ Inline formatting bits (like this **bold** text, _emphasized_ text,
 Gemini readers still have the stylistic context of your text.
 
 Adding two spaces at the end of a line will insert a hard  
-break. Hard breaks at the end of a paragraph are ignored.  
+break. You can also create a hard break using a backslash at the end\
+of a line. Hard breaks at the end of a paragraph are ignored.  
 
 ## Blockquotes
 
@@ -95,11 +96,17 @@ your client handles that.
 ## HTML
 
 Inline HTML is <span class="bold">currently</span> stripped, but HTML
-contents remain on-screen. This may change in the future.
+contents remain on-screen. This may change in the future.<br>Hard breaks
+using \<br> are supported. HTML tags can be escaped using \ or enclosed
+with ``.
 
 <p>HTML tags are stripped from HTML blocks. (Note that HTML blocks must
 begin and end with a supported HTML block tag, and must have blank
 lines before and after the block.)</p>
+
+<p>Hard breaks using &lt;br&gt; are supported<br>inside HTML blocks.
+Escaping tags with \ or `` is not possible inside HTML blocks. HTML
+escaped characters will be unescaped.</p>
 
 <fieldset>Fieldset blocks are not rendered.</fieldset>
 
@@ -126,7 +133,7 @@ can.
 > HTML spans are <em>stripped</em> from
 > inside <span>blockquotes</span>.
 
-> <p>HTML blocks are stripped from inside blockquotes, but currently they prevent the parser from seeing the blockquote.</p>
+> <p>HTML blocks are stripped from inside blockquotes.</p>
 
 ## Misc
 
