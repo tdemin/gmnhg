@@ -7,6 +7,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.2
 	github.com/gomarkdown/markdown v0.0.0-20210915032930-fe0e174ee09a
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/grokify/html-strip-tags-go v0.0.1
 	github.com/hexops/gotextdiff v1.0.3
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect

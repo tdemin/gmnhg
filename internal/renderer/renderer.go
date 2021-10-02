@@ -20,11 +20,12 @@ package renderer
 import (
 	"bytes"
 	"fmt"
+	"html"
 	"io"
 	"regexp"
-	"strings"
 
 	"github.com/gomarkdown/markdown/ast"
+	"github.com/grokify/html-strip-tags-go"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -50,6 +51,25 @@ var (
 
 // matches a FULL string that contains no non-whitespace characters
 var emptyLineRegex = regexp.MustCompile(`\A[\s]*\z`)
+
+// fairly tolerant to handle weird HTML
+var tagPairRegexString = `<[\n\f ]*%s([\n\f ]+[^\n\f \/>"'=]+[\n\f ]*(=[\n\f ]*([a-zA-Z1-9\-]+|"[^\n\f"]+"|'[^\n\f']+'))?)*[\n\f ]*>.*?<[\n\f ]*/[\n\f ]*%s[\n\f ]*>`
+
+// HTML block tags whose contents should not be rendered
+var htmlNoRenderRegex = []*regexp.Regexp{
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "fieldset", "fieldset")),
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "form", "form")),
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "iframe", "iframe")),
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "script", "script")),
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "style", "style")),
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "canvas", "canvas")),
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "dialog", "dialog")),
+	regexp.MustCompile(fmt.Sprintf(tagPairRegexString, "progress", "progress")),
+}
+
+var lineBreakCharacters = regexp.MustCompile(`[\n\r]+`)
+var hardBreakTag = regexp.MustCompile(`< *br */? *>`)
+var escapedHtmlChar = regexp.MustCompile(`(?:^|[^\\\\])&[[:alnum:]]+;`)
 
 // Renderer implements markdown.Renderer.
 type Renderer struct{}
@@ -82,7 +102,7 @@ func (r Renderer) link(w io.Writer, node *ast.Link, entering bool) {
 			w.Write(linkPrefix)
 			w.Write(node.Destination)
 			w.Write(space)
-			r.text(w, node)
+			r.text(w, node, true)
 		}
 	}
 }
@@ -92,7 +112,7 @@ func (r Renderer) image(w io.Writer, node *ast.Image, entering bool) {
 		w.Write(linkPrefix)
 		w.Write(node.Destination)
 		w.Write(space)
-		r.text(w, node)
+		r.text(w, node, true)
 	}
 }
 
@@ -125,7 +145,7 @@ func (r Renderer) subscript(w io.Writer, node *ast.Subscript, entering bool) {
 	if entering {
 		if node := node.AsLeaf(); node != nil {
 			w.Write(subOpen)
-			w.Write([]byte(strings.ReplaceAll(string(node.Literal), "\n", " ")))
+			w.Write(bytes.ReplaceAll(node.Literal, lineBreak, space))
 			w.Write(subClose)
 		}
 	}
@@ -134,7 +154,7 @@ func (r Renderer) superscript(w io.Writer, node *ast.Superscript, entering bool)
 	if entering {
 		if node := node.AsLeaf(); node != nil {
 			w.Write(supOpen)
-			w.Write([]byte(strings.ReplaceAll(string(node.Literal), "\n", " ")))
+			w.Write(bytes.ReplaceAll(node.Literal, lineBreak, space))
 			w.Write(supClose)
 		}
 	}
@@ -151,7 +171,7 @@ func (r Renderer) heading(w io.Writer, node *ast.Heading, entering bool) {
 			heading[i] = '#'
 		}
 		w.Write(heading)
-		r.text(w, node)
+		r.text(w, node, true)
 	} else {
 		w.Write(lineBreak)
 	}
@@ -277,8 +297,16 @@ func (r Renderer) paragraph(w io.Writer, node *ast.Paragraph, entering bool) (no
 				// only render links text in the paragraph if they're
 				// combined with some other text on page
 				switch child := child.(type) {
-				case *ast.Text, *ast.Code, *ast.Emph, *ast.Strong, *ast.Del, *ast.Link, *ast.Image:
-					r.text(w, child)
+				case *ast.Text, *ast.Emph, *ast.Strong, *ast.Del, *ast.Link, *ast.Image:
+					r.text(w, child, true)
+				case *ast.Code:
+					r.text(w, child, false)
+				case *ast.Hardbreak:
+					w.Write(lineBreak)
+				case *ast.HTMLSpan:
+					if hardBreakTag.Match(child.AsLeaf().Literal) {
+						w.Write(lineBreak)
+					}
 				case *ast.Subscript:
 					r.subscript(w, child, true)
 				case *ast.Superscript:
@@ -326,7 +354,7 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 			} else if !isTerm {
 				w.Write(itemPrefix)
 			}
-			r.text(w, item)
+			r.text(w, item, true)
 			w.Write(lineBreak)
 			if l >= 2 {
 				if list, ok := item.Children[1].(*ast.List); ok {
@@ -337,22 +365,43 @@ func (r Renderer) list(w io.Writer, node *ast.List, level int) {
 	}
 }
 
-var lineBreakCharacters = regexp.MustCompile(`[\n\r]+`)
-
-func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
+func textWithNewlineReplacement(node ast.Node, replacement []byte, unescapeHtml bool) []byte {
 	buf := bytes.Buffer{}
 	delimiter := getNodeDelimiter(node)
 	// special case for footnotes: we want them in the text
 	if node, ok := node.(*ast.Link); ok && node.Footnote != nil {
 		fmt.Fprintf(&buf, "[^%d]", node.NoteID)
 	}
-	if node := node.AsLeaf(); node != nil {
+	if leaf := node.AsLeaf(); leaf != nil {
 		// replace all newlines in text with preferred symbols; this may
 		// be spaces for general text, allowing for soft wrapping, which
 		// is recommended as per Gemini spec p. 5.4.1, or line breaks
 		// with a blockquote symbols for blockquotes, or just nothing
 		buf.Write(delimiter)
-		buf.Write(lineBreakCharacters.ReplaceAll(node.Literal, replacement))
+		switch node := node.(type) {
+		case *ast.Hardbreak:
+			buf.Write(lineBreak)
+			// If the blockquote ends with a double space, the parser will
+			// not create a Hardbreak at the end, so this works.
+			if _, ok := leaf.Parent.(*ast.BlockQuote); !ok {
+				buf.Write(quotePrefix)
+			}
+		case *ast.HTMLSpan:
+			if hardBreakTag.Match(leaf.Literal) {
+				buf.Write(lineBreak)
+			}
+			buf.Write(leaf.Content)
+		case *ast.HTMLBlock:
+			buf.Write([]byte(extractHtml(node, quotePrefix)))
+		default:
+			textWithoutBreaks := lineBreakCharacters.ReplaceAll(leaf.Literal, replacement)
+			if unescapeHtml {
+				unescapedText := escapedHtmlChar.ReplaceAll(textWithoutBreaks, []byte(html.UnescapeString(string(textWithoutBreaks))))
+				buf.Write(unescapedText)
+			} else {
+				buf.Write(textWithoutBreaks)
+			}
+		}
 		buf.Write(delimiter)
 	}
 	if node := node.AsContainer(); node != nil {
@@ -362,7 +411,7 @@ func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
 			switch child := child.(type) {
 			case *ast.List:
 			default:
-				buf.Write(textWithNewlineReplacement(child, replacement))
+				buf.Write(textWithNewlineReplacement(child, replacement, unescapeHtml))
 			}
 		}
 		buf.Write(delimiter)
@@ -370,16 +419,30 @@ func textWithNewlineReplacement(node ast.Node, replacement []byte) []byte {
 	return buf.Bytes()
 }
 
-func (r Renderer) text(w io.Writer, node ast.Node) {
-	w.Write(textWithNewlineReplacement(node, space))
+func (r Renderer) text(w io.Writer, node ast.Node, unescapeHtml bool) {
+	w.Write(textWithNewlineReplacement(node, space, unescapeHtml))
 }
 
 func (r Renderer) blockquoteText(w io.Writer, node ast.Node) {
-	w.Write(textWithNewlineReplacement(node, quoteBrPrefix))
+	w.Write(textWithNewlineReplacement(node, quoteBrPrefix, true))
 }
 
 func extractText(node ast.Node) string {
-	return string(textWithNewlineReplacement(node, space))
+	return string(textWithNewlineReplacement(node, space, true))
+}
+
+func extractHtml(node *ast.HTMLBlock, linePrefix []byte) string {
+	// Only render contents of allowed tags
+	literal := node.Literal
+	for _, re := range htmlNoRenderRegex {
+		literal = re.ReplaceAllLiteral(literal, []byte{})
+	}
+	if len(literal) > 0 {
+		literalWithBreaks := hardBreakTag.ReplaceAll(lineBreakCharacters.ReplaceAll(literal, space), append([]byte(lineBreak), linePrefix...))
+		literalStripped := strip.StripTags(string(literalWithBreaks))
+		return html.UnescapeString(literalStripped)
+	}
+	return ""
 }
 
 func (r Renderer) tableHead(t *tablewriter.Table, node *ast.TableHeader) {
@@ -440,6 +503,17 @@ func (r Renderer) table(w io.Writer, node *ast.Table, entering bool) {
 	}
 }
 
+func (r Renderer) htmlBlock(w io.Writer, node *ast.HTMLBlock, entering bool) {
+	if entering {
+		htmlString := extractHtml(node, []byte{})
+		if len(htmlString) > 0 {
+			w.Write([]byte(htmlString))
+			w.Write(lineBreak)
+			w.Write(lineBreak)
+		}
+	}
+}
+
 // RenderNode implements Renderer.RenderNode().
 func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.WalkStatus {
 	// entering in gomarkdown was made to have elements of type switch
@@ -487,6 +561,11 @@ func (r Renderer) RenderNode(w io.Writer, node ast.Node, entering bool) ast.Walk
 		r.table(w, node, entering)
 		noNewLine = false
 		fetchLinks = true
+	case *ast.HTMLBlock:
+		// Do not render if already rendered as part of a blockquote
+		if _, ok := node.Parent.(*ast.BlockQuote); !ok {
+			r.htmlBlock(w, node, entering)
+		}
 	}
 	if !noNewLine && !entering {
 		w.Write(lineBreak)

@@ -6,6 +6,10 @@ Single newlines (like in this multi-line paragraph) will get replaced by a space
 
 Inline formatting bits (like this **bold** text, *emphasized* text, ~~strikethrough~~ text, `preformatted text`) are kept to make sure Gemini readers still have the stylistic context of your text.
 
+Adding two spaces at the end of a line will insert a hard
+break. You can also create a hard break using a backslash at the end
+of a line. Hard breaks at the end of a paragraph are ignored.
+
 ## Blockquotes
 
 Newlines in blockquote paragraphs, unlike usual paragraphs, aren't replaced with a space. This facilitates appending authorship information to the quote, or using blockquotes to write poems.
@@ -21,6 +25,9 @@ Newlines in blockquote paragraphs, unlike usual paragraphs, aren't replaced with
 > the author of this program."
 
 > — also Timur Demin, in the process of writing this test file
+
+> Hard breaks are also supported in blockquotes,
+> for compatibility. Hard breaks at the end of a blockquote are ignored.
 
 ## Code
 
@@ -74,15 +81,45 @@ Since clients like Lagrange treat the fourth and the rest of #-s as heading cont
 
 ###### Heading 6
 
+## HTML
+
+Inline HTML is currently stripped, but HTML contents remain on-screen. This may change in the future. HTML tags can be escaped with \ as in <span></span> or enclosed with ``.
+
+HTML tags are stripped from HTML blocks. (Note that HTML blocks must begin and end with a supported HTML block tag, and must have blank lines before and after the block.)
+
+### Break tags
+
+Hard breaks
+using <br> are supported.
+
+Hard breaks using <br> are supported
+inside HTML blocks.
+
+### HTML entities
+
+HTML escaped entities like & and < are unescaped, even when they show up inside an inline HTML section. Escaping them with a leading backslash is possible outside of HTML blocks: &amp;, &lt;. Any escaped characters inside a code span (such as `&lt; or &gt;`) will not be unescaped.
+
+HTML escaped entities like < and > are also unescaped inside HTML blocks. Backslash escapes have no effect: \&.
+
+### Forbidden tags
+
+Tags that are unable to output Gemini-compatible text are completely removed from the output.
+
+Note that the contents of "forbidden" tags will be rendered if they are placed inline, although the tags themselves will be stripped. Placing HTML block elements inline in this manner violates the spec of common Markdown flavors, but gmnhg handles it the best it can.
+
+### HTML in blockquotes
+
+> HTML spans are stripped from
+> inside blockquotes.
+
+> Non HTML block text before the block.
+> HTML blocks are stripped from inside blockquotes.
+> Non HTML block text after the block.
+
+> Standalone blockquoted HTML blocks
+> are also stripped of their tags.
+
 ## Misc
-
-Inline HTML is currently stripped, but HTML contents remain on-screen. This may change in the future.
-
-> There's currently a bug in gmnhg which prevents it from
-> stripping HTML in certain scenarios. HTML is noticeably still present
-> inside <span>blockquotes</span>.
-
-=> https://github.com/tdemin/gmnhg/issues/6 bug in gmnhg
 
 ---
 

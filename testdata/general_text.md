@@ -10,6 +10,10 @@ Inline formatting bits (like this **bold** text, _emphasized_ text,
 ~~strikethrough~~ text, `preformatted text`) are kept to make sure
 Gemini readers still have the stylistic context of your text.
 
+Adding two spaces at the end of a line will insert a hard  
+break. You can also create a hard break using a backslash at the end\
+of a line. Hard breaks at the end of a paragraph are ignored.  
+
 ## Blockquotes
 
 Newlines in blockquote paragraphs, unlike usual paragraphs, aren't
@@ -27,6 +31,9 @@ to the quote, or using blockquotes to write poems.
 > the author of this program."
 >
 > — also Timur Demin, in the process of writing this test file
+
+> Hard breaks are also supported in blockquotes,  
+> for compatibility. Hard breaks at the end of a blockquote are ignored.  
 
 ## Code
 
@@ -86,14 +93,72 @@ your client handles that.
 
 ###### Heading 6
 
-## Misc
+## HTML
 
 Inline HTML is <span class="bold">currently</span> stripped, but HTML
-contents remain on-screen. This may change in the future.
+contents remain on-screen. This may change in the future. HTML tags
+can be escaped with \ as in \<span>\</span> or enclosed with \`\`.
 
-> There's currently a [bug in gmnhg][bug] which prevents it from
-> stripping HTML in certain scenarios. HTML is noticeably still present
+<p>HTML tags are stripped from HTML blocks. (Note that HTML blocks
+must begin and end with a <em>supported</em> HTML block tag, and must
+have blank lines before and after the block.)</p>
+
+### Break tags
+
+Hard breaks<br>using \<br> are supported. 
+
+<p>Hard breaks using &lt;br&gt; are supported<br>inside HTML blocks.</p>
+
+### HTML entities
+
+HTML escaped entities like &amp; and <span>&lt;</span> are unescaped,
+even when they show up inside an inline HTML section. Escaping
+them with a leading backslash is possible outside of HTML blocks:
+\&amp;, \&lt;. Any escaped characters inside a code span (such as `&lt;
+or &gt;`) will not be unescaped.
+
+<p>HTML escaped entities like &lt; and &gt; are also unescaped
+inside HTML blocks. Backslash escapes have no effect: \&amp;.</p>
+
+### Forbidden tags
+
+Tags that are unable to output Gemini-compatible text are completely
+removed from the output.
+
+<fieldset>Fieldset blocks are not rendered.</fieldset>
+
+<form>Form blocks are not rendered.</form>
+
+<iframe>Iframe blocks are not rendered.</iframe>
+
+<script>Script blocks are not rendered.</script>
+
+<style>Style blocks are not rendered.</style>
+
+<canvas>Canvas blocks are not rendered.</canvas>
+
+<dialog>Dialog blocks are not rendered.</dialog>
+
+<progress>Progress blocks are not rendered.</progress>
+
+Note that the contents of "forbidden" tags will be rendered if they are
+placed <script>inline</script>, although the tags themselves will be
+stripped. Placing HTML block elements inline in this manner violates
+the spec of common Markdown flavors, but gmnhg handles it the best it
+can.
+
+### HTML in blockquotes
+
+> HTML spans are <em>stripped</em> from
 > inside <span>blockquotes</span>.
+
+> Non HTML block text before the block.
+> <p>HTML blocks are stripped from inside blockquotes.</p>
+> Non HTML block text after the block.
+
+> <p>Standalone blockquoted HTML blocks<br>are also stripped of their tags.</p>
+
+## Misc
 
 ***
 
