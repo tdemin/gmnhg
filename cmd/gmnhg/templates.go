@@ -79,7 +79,7 @@ var defaultRssTemplate = mustParseTmpl("rss", `{{- $Site := .Site -}}
       <link>{{ $AbsURL }}</link>
       <pubDate>{{ $p.Metadata.Date.Format "Mon, 02 Jan 2006 15:04:05 -0700" }}</pubDate>
       <guid>{{ $AbsURL }}</guid>
-      <description>{{ html $p.Metadata.Summary }}</description>
+      <description>{{ printf "%s" $p.Post }}</description>
     </item>
     {{end}}{{end}}
   </channel>
