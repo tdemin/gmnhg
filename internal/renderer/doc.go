@@ -13,19 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with gmnhg. If not, see <https://www.gnu.org/licenses/>.
 
+// Package renderer contains an implementation of markdown => text/gemini
+// renderer for github.com/gomarkdown/markdown.
 package renderer
-
-import (
-	"io"
-
-	"github.com/gomarkdown/markdown/ast"
-)
-
-func (r Renderer) image(w io.Writer, node *ast.Image, entering bool) {
-	if entering {
-		w.Write(linkPrefix)
-		w.Write(node.Destination)
-		w.Write(space)
-		r.text(w, node, true)
-	}
-}
