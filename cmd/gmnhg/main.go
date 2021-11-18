@@ -47,7 +47,7 @@
 // 1. Single pages are given .Post, which contains the entire post
 // rendered, .Metadata, which contains the metadata crawled from it (see
 // Metadata in internal/gmnhg/post.go), and .Link, which contains the
-// filename relative to content dir (with .md replaced with .gmi). 
+// filename relative to content dir (with .md replaced with .gmi).
 //
 // 2. Directory index pages, including the top-level index, are passed
 // .Posts, which is a slice over post metadata crawled (see Metadata in
@@ -60,8 +60,8 @@
 //
 // The following keys are available in the .Site map, listed with their
 // associated Hugo configuration key: .BaseURL (baseUrl), .GmnhgBaseURL,
-// (gmnhg.baseUrl), .Title (title), .GmnhgTitle (gmnhg.title), .Copyright
-// (copyright), and .LanguageCode (languageCode).
+// (gmnhg.baseUrl), .Title (title), .GmnhgTitle (gmnhg.title),
+// .Copyright (copyright), and .LanguageCode (languageCode).
 //
 // Directory indices are passed all posts from subdirectories (branch
 // and leaf bundles), with the exception of leaf resource pages. This
@@ -86,16 +86,16 @@
 // for more details.
 //
 // RSS will be generated as rss.xml for the root directory and all
-// branch directories. Site title and other RSS metadata will be
-// loaded from the Hugo configuration file (config.toml, config.yaml,
-// or config.json).
+// branch directories. Site title and other RSS metadata will be loaded
+// from the Hugo configuration file (config.toml, config.yaml, or
+// config.json).
 //
 // gmnhg provides a way to override these attributes by defining a
 // "gmnhg" section in the configuration file and nesting the attributes
 // to override underneath this section. Presently you can override both
 // "baseUrl" and "title" in this manner. It is recommended to override
-// at least "baseUrl" unless your site uses a protocol-relative base
-// URL (beginning with a double slash instead of https://).
+// at least "baseUrl" unless your site uses a protocol-relative base URL
+// (beginning with a double slash instead of https://).
 //
 // RSS templates can be overriden by defining a template in one of
 // several places:
@@ -104,8 +104,8 @@
 //
 // * Site root: gmnhg/rss.gotmpl
 //
-// * Directories: gmnhg/rss/dirname.gotmpl for a directory "/dirname"
-// or gmnhg/rss/dirname/subdir.gotmpl for "/dirname/subdir"
+// * Directories: gmnhg/rss/dirname.gotmpl for a directory "/dirname" or
+// gmnhg/rss/dirname/subdir.gotmpl for "/dirname/subdir"
 //
 // One might want to ignore _index.gmi.md files with the following Hugo
 // config option in config.toml:
