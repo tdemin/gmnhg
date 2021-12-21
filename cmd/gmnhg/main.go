@@ -149,9 +149,9 @@ const (
 )
 
 var (
-	tmplNameRegex  = regexp.MustCompile("^" + templateBase + `([\w-_ /]+)\.gotmpl$`)
-	leafIndexRegex = regexp.MustCompile("^" + contentBase + `([\w-_ /]+)/index\.[\w]+$`)
-	pagePathRegex  = regexp.MustCompile("^" + contentBase + `([\w-_ /]+)/([\w-_ ]+)\.md$`)
+	tmplNameRegex  = regexp.MustCompile("^" + templateBase + `([\pL\d\-_ /]+)\.gotmpl$`)
+	leafIndexRegex = regexp.MustCompile("^" + contentBase + `([\pL\d\-_ /]+)/index\.[\pL\d_]+$`)
+	pagePathRegex  = regexp.MustCompile("^" + contentBase + `([\pL\d\-_ /]+)/([\pL\d\-_ ]+)\.md$`)
 )
 
 var hugoConfigFiles = []string{"config.toml", "config.yaml", "config.json"}
