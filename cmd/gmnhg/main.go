@@ -54,7 +54,8 @@
 // internal/gmnhg/post.go), .Dirname, which is the directory name
 // relative to the content dir, .Link, which contains the index filename
 // relative to the content dir (with .md replaced with .gmi), .Content,
-// which is rendered from directory's _index.gmi.md, and .Site, which
+// which is rendered from directory's _index.gmi.md, .Metadata, which
+// contains metadata crawled from _index.gmi.md, and .Site, which
 // contains site-level configuration data loaded from the Hugo site's
 // config.toml, config.yaml, or config.json.
 //
@@ -67,8 +68,9 @@
 // and leaf bundles), with the exception of leaf resource pages. This
 // allows for roll-up indices.
 //
-// 3. RSS templates receive the same data as directory index pages, but
-// the filename provided by .Link is rss.xml instead of index.gmi.
+// 3. RSS templates receive the same data as directory index pages
+// (except for .Metadata), but the filename provided by .Link is rss.xml
+// instead of index.gmi.
 //
 // This program provides some extra template functions on top of sort:
 //
@@ -446,11 +448,12 @@ func main() {
 			"LanguageCode": siteConf.LanguageCode,
 		}
 		cnt := map[string]interface{}{
-			"Posts":   posts,
-			"Dirname": dirname,
-			"Link":    path.Join(dirname, indexFilename),
-			"Content": gemtext,
-			"Site":    sc,
+			"Posts":    posts,
+			"Dirname":  dirname,
+			"Link":     path.Join(dirname, indexFilename),
+			"Content":  gemtext,
+			"Site":     sc,
+			"Metadata": metadata,
 		}
 		buf := bytes.Buffer{}
 		if err := tmpl.Execute(&buf, cnt); err != nil {
@@ -469,7 +472,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	content, _ := gmnhg.ParseMetadata(indexContent)
+	content, metadata := gmnhg.ParseMetadata(indexContent)
 	gemtext, err := gemini.RenderMarkdown(content, gemini.Defaults)
 	if err != nil {
 		panic(err)
@@ -483,11 +486,12 @@ func main() {
 		"LanguageCode": siteConf.LanguageCode,
 	}
 	cnt := map[string]interface{}{
-		"Posts":   topLevelPosts,
-		"Dirname": "/",
-		"Link":    path.Join("/", indexFilename),
-		"Content": gemtext,
-		"Site":    sc,
+		"Posts":    topLevelPosts,
+		"Dirname":  "/",
+		"Link":     path.Join("/", indexFilename),
+		"Content":  gemtext,
+		"Site":     sc,
+		"Metadata": metadata,
 	}
 	buf := bytes.Buffer{}
 	if err := indexTmpl.Execute(&buf, cnt); err != nil {
