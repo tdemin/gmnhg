@@ -62,7 +62,7 @@ var (
 	yamlDelimiter   = []byte("---\n")
 	tomlDelimiter   = []byte("+++\n")
 	jsonObjectRegex = regexp.MustCompile(`\A(\{[\s\S]*\})\n\n`)
-	orgModeRegex    = regexp.MustCompile(`\A((?:#\+\w+\[?\]?: ?[^\n\r]*\n)+)`)
+	orgModeRegex    = regexp.MustCompile(`\A((?:#\+[\pL\d_]+\[?\]?: ?[^\n\r]*\n)+)`)
 )
 
 // ParseMetadata extracts TOML/JSON/YAML/org-mode format front matter
