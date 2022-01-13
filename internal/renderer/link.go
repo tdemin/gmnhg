@@ -18,6 +18,7 @@ package renderer
 import (
 	"fmt"
 	"io"
+	"net/url"
 
 	"github.com/gomarkdown/markdown/ast"
 )
@@ -27,8 +28,13 @@ func (r Renderer) link(w io.Writer, node *ast.Link, entering bool) {
 		if node.Footnote != nil {
 			fmt.Fprintf(w, "[^%d]: %s", node.NoteID, extractText(node.Footnote))
 		} else {
+			uri, err := url.Parse(string(node.Destination))
+			if err != nil {
+				// TODO: should we skip links with invalid URIs?
+				return
+			}
 			w.Write(linkPrefix)
-			w.Write(node.Destination)
+			w.Write([]byte(uri.String()))
 			w.Write(space)
 			r.text(w, node, true)
 		}

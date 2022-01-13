@@ -32,6 +32,12 @@ this is an example of a link inside a blockquote:
 > OTR has significant usability drawbacks for inter-client mobility.
 > — [XEP-0384](https://xmpp.org/extensions/xep-0384.html)
 
+Links will get encoded according to RFC 3986, like this sample
+[link](/URI with spaces) to nowhere. The other sample link to
+somewhere on GitHub will not get transformed: [sample][elsewhere].
+
+[elsewhere]: https://github.com:443/request+with+characters%20
+
 ## Footnotes
 
 gmnhg supports footnotes, written like this[^1]. Footnotes can use any
