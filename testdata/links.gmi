@@ -26,9 +26,10 @@ Other container elements can contain inline links as well. For instance, this is
 
 => https://xmpp.org/extensions/xep-0384.html XEP-0384
 
-Links will get encoded according to RFC 3986, like this sample link to nowhere.
+Links will get encoded according to RFC 3986, like this sample link to nowhere. The other sample link to somewhere on GitHub will not get transformed: sample.
 
 => /URI%20with%20spaces link
+=> https://github.com:443/request+with+characters%20 sample
 
 ## Footnotes
 
