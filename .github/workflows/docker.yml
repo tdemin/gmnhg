@@ -43,3 +43,13 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ env.tag_name }}
+          build-args: |
+            gmnhg_version=${{ env.tag_name }}
+          # TODO: set org.opencontainers.image.revision when this gets
+          # fixed: https://github.com/actions/checkout/issues/209
+          labels: |
+            org.opencontainers.image.url="${{ github.server_url }}/${{ github.repository }}"
+            org.opencontainers.image.source=${{ github.repositoryUrl }}
+            org.opencontainers.image.version=${{ env.tag_name }}
+            org.opencontainers.image.licenses=GPL-3.0
+            org.opencontainers.image.title=gmnhg
