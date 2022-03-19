@@ -1,38 +1,38 @@
 builds:
-- main: ./cmd/gmnhg
-  id: gmnhg
-  binary: gmnhg
-  env:
-  - CGO_ENABLED=0
-  goos:
-  - linux
-  - windows
-  - darwin
-  - freebsd
-  - openbsd
-  - netbsd
-- main: ./cmd/md2gmn
-  id: md2gmn
-  binary: md2gmn
-  env:
-  - CGO_ENABLED=0
-  goos:
-  - linux
-  - windows
-  - darwin
-  - freebsd
-  - openbsd
-  - netbsd
+  - main: ./cmd/gmnhg
+    id: gmnhg
+    binary: gmnhg
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+      - freebsd
+      - openbsd
+      - netbsd
+  - main: ./cmd/md2gmn
+    id: md2gmn
+    binary: md2gmn
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+      - freebsd
+      - openbsd
+      - netbsd
 archives:
-- replacements:
-    darwin: Darwin
-    linux: Linux
-    windows: Windows
-    freebsd: FreeBSD
-    openbsd: OpenBSD
-    netbsd: NetBSD
-    386: i386
-    amd64: x86_64
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      freebsd: FreeBSD
+      openbsd: OpenBSD
+      netbsd: NetBSD
+      386: i386
+      amd64: x86_64
 checksum:
   name_template: 'checksums.txt'
 snapshot:
