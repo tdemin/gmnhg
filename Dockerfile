@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine AS builder
+FROM golang:1.18-alpine AS builder
 
 WORKDIR /src
 
@@ -14,7 +14,7 @@ RUN \
     go build -v -o /tmp/gmnhg ./cmd/gmnhg && \
     go build -v -o /tmp/md2gmn ./cmd/md2gmn
 
-FROM alpine:3.14 AS runner
+FROM alpine:3.15 AS runner
 
 LABEL maintainer "Timur Demin <me@tdem.in>"
 
