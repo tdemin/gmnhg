@@ -158,17 +158,14 @@ var (
 
 var hugoConfigFiles = []string{"config.toml", "config.yaml", "config.json"}
 
-type SiteConfig struct {
-	BaseURL      string      `yaml:"baseURL"`
-	Title        string      `yaml:"title"`
-	Copyright    string      `yaml:"copyright"`
-	LanguageCode string      `yaml:"languageCode"`
-	Gmnhg        GmnhgConfig `yaml:"gmnhg"`
-}
+type siteConfig map[string]interface{}
 
-type GmnhgConfig struct {
-	BaseURL string `yaml:"baseURL"`
-	Title   string `yaml:"title"`
+func (sc siteConfig) Get(key string) interface{} {
+	gmnhgSubmap, ok := sc["gmnhg"].(map[string]interface{})
+	if ok {
+		return gmnhgSubmap[key]
+	}
+	return sc[key]
 }
 
 func copyFile(dst, src string) error {
@@ -243,7 +240,7 @@ func main() {
 	}
 
 	configFound := false
-	var siteConf SiteConfig
+	var siteConf siteConfig
 	for _, filename := range hugoConfigFiles {
 		if fileInfo, err := os.Stat(filename); !(os.IsNotExist(err) || fileInfo.IsDir()) {
 			configFound = true
