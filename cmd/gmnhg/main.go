@@ -24,12 +24,13 @@
 // 1. If the .md file specifies its own layout, the relevant layout file
 // is applied. If not, the default template is applied (single). If the
 // layout file does not exist, the file is skipped. Draft posts are not
-// rendered. _index.md files are also skipped.
+// rendered.
 //
 // 2. For every top-level content directory an index.gmi is generated,
 // the corresponding template is taken from top/{directory_name}.gotmpl.
-// Its content is taken from _index.gmi.md in that dir. If there's no
-// matching template or no _index.gmi.md, the index won't be rendered.
+// Its content is taken from either _index.gmi.md or _index.md (.gmi.md
+// preferred) in that dir. If there's no matching template or no
+// _index.gmi.md / _index.md, the index won't be rendered.
 //
 // Templates for subdirectories are placed in subfolders under top/. For
 // example, a template for an index at series/first/_index.gmi.md should
@@ -54,10 +55,10 @@
 // internal/gmnhg/post.go), .Dirname, which is the directory name
 // relative to the content dir, .Link, which contains the index filename
 // relative to the content dir (with .md replaced with .gmi), .Content,
-// which is rendered from directory's _index.gmi.md, .Metadata, which
-// contains metadata crawled from _index.gmi.md, and .Site, which
-// contains site-level configuration data loaded from the Hugo site's
-// config.toml, config.yaml, or config.json.
+// which is rendered from directory's _index.gmi.md / _index.md,
+// .Metadata, which contains metadata crawled from _index.gmi.md /
+// _index.md, and .Site, which contains site-level configuration data
+// loaded from the Hugo site's config.toml, config.yaml, or config.json.
 //
 // The following keys are available in the .Site map, listed with their
 // associated Hugo configuration key: .BaseURL (baseUrl), .GmnhgBaseURL,
@@ -137,10 +138,11 @@ import (
 )
 
 const (
-	defaultPageTemplate = "single"
-	indexMdFilename     = "_index.gmi.md"
-	indexFilename       = "index.gmi"
-	rssFilename         = "rss.xml"
+	defaultPageTemplate   = "single"
+	hugoIndexMdFilename   = "_index.md"
+	geminiIndexMdFilename = "_index.gmi.md"
+	indexFilename         = "index.gmi"
+	rssFilename           = "rss.xml"
 )
 
 const (
@@ -169,6 +171,16 @@ type SiteConfig struct {
 type GmnhgConfig struct {
 	BaseURL string `yaml:"baseURL"`
 	Title   string `yaml:"title"`
+}
+
+func findIndexMd(basepath string) string {
+	for _, filename := range []string{geminiIndexMdFilename, hugoIndexMdFilename} {
+		path := path.Join(basepath, filename)
+		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+			return path
+		}
+	}
+	return ""
 }
 
 func copyFile(dst, src string) error {
@@ -326,7 +338,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		if n := info.Name(); info.IsDir() || !strings.HasSuffix(n, ".md") || n == "_index.md" || n == indexMdFilename {
+		if n := info.Name(); info.IsDir() || !strings.HasSuffix(n, ".md") || n == hugoIndexMdFilename || n == geminiIndexMdFilename {
 			return nil
 		}
 		fileContent, err := ioutil.ReadFile(path)
@@ -426,7 +438,7 @@ func main() {
 		if !hasTmpl {
 			continue
 		}
-		fileContent, err := ioutil.ReadFile(path.Join(contentBase, dirname, indexMdFilename))
+		fileContent, err := ioutil.ReadFile(findIndexMd(path.Join(contentBase, dirname)))
 		if err != nil {
 			// skip unreadable index files
 			continue
@@ -468,7 +480,7 @@ func main() {
 	if t, hasIndexTmpl := templates["index"]; hasIndexTmpl {
 		indexTmpl = t
 	}
-	indexContent, err := ioutil.ReadFile(path.Join(contentBase, indexMdFilename))
+	indexContent, err := ioutil.ReadFile(findIndexMd(contentBase))
 	if err != nil {
 		panic(err)
 	}
