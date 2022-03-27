@@ -17,7 +17,7 @@
 // to be started in the top level directory of a Hugo site (the one
 // containing config.toml, config.json, or config.yaml).
 //
-// gmngh will read layout template files (with .gotmpl extension) and
+// gmnhg will read layout template files (with .gotmpl extension) and
 // then apply them to content files ending with .md by the following
 // algorithm (layout file names are relative to gmnhg/):
 //
