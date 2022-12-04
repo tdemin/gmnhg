@@ -13,6 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with gmnhg. If not, see <https://www.gnu.org/licenses/>.
 
-// Package renderer contains an implementation of markdown => text/gemini
-// renderer for github.com/gomarkdown/markdown.
+// Package renderer contains an implementation of markdown =>
+// text/gemini renderer for github.com/yuin/goldmark.
 package renderer

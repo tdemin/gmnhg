@@ -23,6 +23,7 @@ import (
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/parser"
 	"github.com/tdemin/gmnhg/internal/renderer"
+	renderer2 "github.com/tdemin/gmnhg/internal/renderer2"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/text"
@@ -67,14 +68,14 @@ func RenderMarkdown(md []byte, settings Settings) (geminiText []byte, err error)
 // RenderMarkdown2 converts Markdown text to Gemtext using Goldmark. It
 // ignores front matter if any has been provided in the text.
 func RenderMarkdown2(md []byte, settings Settings) (geminiText []byte, err error) {
+	r := renderer2.NewRenderer()
 	gm := goldmark.New(
 		goldmark.WithExtensions(
 			extension.GFM,
 			extension.Footnote,
 			extension.DefinitionList,
 		),
-		// FIXME: the actual renderer is yet to implemented with gmnhg
-		goldmark.WithRenderer(nil),
+		goldmark.WithRenderer(r),
 	)
 	ast := gm.Parser().Parse(text.NewReader(md))
 
