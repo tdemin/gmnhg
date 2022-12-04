@@ -23,6 +23,9 @@ import (
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/parser"
 	"github.com/tdemin/gmnhg/internal/renderer"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/text"
 )
 
 // Settings is a bitmask for renderer preferences.
@@ -40,6 +43,17 @@ const (
 
 var trailing = []byte("\n\n")
 
+func stripTrailingNewlines(content []byte) []byte {
+	stripped := content
+	for li := bytes.LastIndex(stripped, trailing); li != -1; li = bytes.LastIndex(stripped, trailing) {
+		if li != len(stripped)-len(trailing) {
+			break
+		}
+		stripped = stripped[:len(stripped)-1]
+	}
+	return stripped
+}
+
 // RenderMarkdown converts Markdown text to Gemtext using gomarkdown. It
 // ignores front matter if any has been provided in the text.
 func RenderMarkdown(md []byte, settings Settings) (geminiText []byte, err error) {
@@ -47,12 +61,26 @@ func RenderMarkdown(md []byte, settings Settings) (geminiText []byte, err error)
 		parser.NoEmptyLineBeforeBlock|
 		parser.Footnotes))
 	content := markdown.Render(ast, renderer.NewRenderer())
-	// strip trailing newlines if any
-	for li := bytes.LastIndex(content, trailing); li != -1; li = bytes.LastIndex(content, trailing) {
-		if li != len(content)-len(trailing) {
-			break
-		}
-		content = content[:len(content)-1]
+	return stripTrailingNewlines(content), nil
+}
+
+// RenderMarkdown2 converts Markdown text to Gemtext using Goldmark. It
+// ignores front matter if any has been provided in the text.
+func RenderMarkdown2(md []byte, settings Settings) (geminiText []byte, err error) {
+	gm := goldmark.New(
+		goldmark.WithExtensions(
+			extension.GFM,
+			extension.Footnote,
+			extension.DefinitionList,
+		),
+		// FIXME: the actual renderer is yet to implemented with gmnhg
+		goldmark.WithRenderer(nil),
+	)
+	ast := gm.Parser().Parse(text.NewReader(md))
+
+	buf := bytes.Buffer{}
+	if err := gm.Renderer().Render(&buf, md, ast); err != nil {
+		return nil, err
 	}
-	return content, nil
+	return stripTrailingNewlines(buf.Bytes()), nil
 }

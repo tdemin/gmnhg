@@ -75,3 +75,29 @@ func TestRenderer(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderer2(t *testing.T) {
+	for _, testName := range fileList {
+		t.Logf("testing %s", testName)
+		mdContents, err := ioutil.ReadFile(path.Join("testdata", testName+".md"))
+		if err != nil {
+			t.Fatalf("failed to open Markdown test %s: %v", testName, err)
+		}
+		gmiContents, err := ioutil.ReadFile(path.Join("testdata", testName+".gmi"))
+		if err != nil {
+			t.Logf("%s: cannot open Gemtext file, skipping: %v", testName, err)
+			continue
+		}
+		content, _ := gmnhg.ParseMetadata(mdContents)
+		geminiContent, err := RenderMarkdown2(content, Defaults)
+		if err != nil {
+			t.Errorf("failed to convert %s Markdown to Gemtext: %v", testName, err)
+		}
+		if !bytes.Equal(geminiContent, gmiContents) {
+			diff := myers.ComputeEdits(span.URIFromPath("a.gmi"),
+				string(geminiContent), string(gmiContents))
+			t.Errorf("content mismatch on %s, diff:\n%s", testName,
+				gotextdiff.ToUnified("a.gmi", "b.gmi", string(geminiContent), diff))
+		}
+	}
+}
